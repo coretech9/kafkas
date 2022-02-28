@@ -2,6 +2,7 @@
 
 C# Consumer Implementation for Apache Kafka.
 
+[![NuGet](https://img.shields.io/nuget/v/Coretech9.Kafkas?label=Kafkas%20NuGet)](https://www.nuget.org/packages/Coretech9.Kafkas)
 
 Sample Usage:
 
