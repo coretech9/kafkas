@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <LangVersion>10</LangVersion>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Title>Coretech9.Kafkas</Title>
+        <Product>Coretech9.Kafkas</Product>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <FileVersion>1.0.0</FileVersion>
+        <PackageVersion>1.0.0</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Coretech9;Ertuğrul Helvacıköylü;Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/coretech9/Kafkas</PackageProjectUrl>
+        <PackageLicense>https://github.com/coretech9/Kafkas/blob/master/LICENSE</PackageLicense>
+        <RepositoryUrl>https://github.com/coretech9/Kafkas</RepositoryUrl>
+        <Description>C# Consumer Client Implementation for Apache Kafka</Description>
+        <PackageTags>apache,kafka,consumer,producer</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Coretech9.Kafkas.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Coretech9.Kafkas.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Confluent.Kafka" Version="1.8.2" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    </ItemGroup>
+
+</Project>
