@@ -70,9 +70,7 @@ public class KafkasRunner<TMessage> : KafkasRunner
                     throw new ArgumentNullException($"TopicConsumer is not registered for {typeof(TMessage).FullName}");
 
                 await messageConsumer.Consume(context);
-
-                if (Options != null && Options.CommitErrorMessages)
-                    Consumer?.Commit(consumeResult);
+                Consumer?.Commit(consumeResult);
 
                 break;
             }
