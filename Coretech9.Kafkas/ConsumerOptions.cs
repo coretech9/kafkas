@@ -43,6 +43,12 @@ public class ConsumerOptions
     public bool CommitErrorMessages { get; set; }
 
     /// <summary>
+    /// If true, sends failed messages to error topics.
+    /// Default error topic name is TopicName_Error
+    /// </summary>
+    public bool UseErrorTopics { get; set; }
+
+    /// <summary>
     /// Error topic generator function
     /// </summary>
     public Func<ConsumingMessageMeta, string>? ErrorTopicGenerator { get; set; }

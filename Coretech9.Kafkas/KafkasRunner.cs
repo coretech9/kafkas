@@ -105,7 +105,7 @@ public class KafkasRunner<TMessage> : KafkasRunner
 
     private async Task ProduceErrorMessage(ConsumeResult<Null, string> consumeResult)
     {
-        if (Options == null || Producer == null)
+        if (Options == null || Producer == null || !Options.UseErrorTopics)
             return;
 
         string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage), consumeResult.TopicPartition, consumeResult.TopicPartitionOffset));
@@ -171,7 +171,7 @@ public abstract class KafkasRunner : IHostedService
     /// Service provider for MSDI
     /// </summary>
     protected IServiceProvider? ServiceProvider { get; private set; }
-    
+
     /// <summary>
     /// Consumer Type
     /// </summary>
@@ -237,7 +237,8 @@ public abstract class KafkasRunner : IHostedService
 
     private void StartProducerClient()
     {
-        Producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
+        if (Options.UseErrorTopics)
+            Producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
     }
 
     private void StartConsumerClient()
