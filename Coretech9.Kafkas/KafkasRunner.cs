@@ -44,10 +44,10 @@ public class KafkasRunner<TMessage> : KafkasRunner
         catch (Exception e)
         {
             Logger?.LogError(e, "Model Serialization error for {topicName}", consumeResult.Topic);
-            await ProduceErrorMessage(consumeResult);
+            bool produced = await ProduceErrorMessage(consumeResult);
 
-            if (Options.CommitErrorMessages)
-                Consumer?.Commit(consumeResult);
+            if (produced && Options.CommitErrorMessages)
+                SafeCommit(consumeResult);
 
             return;
         }
@@ -74,20 +74,16 @@ public class KafkasRunner<TMessage> : KafkasRunner
 
                 break;
             }
-            catch (ArgumentNullException)
-            {
-                throw;
-            }
             catch (Exception e)
             {
                 context.RetryCount++;
 
                 if (context.RetryCount >= Options!.RetryCount)
                 {
-                    await ProduceErrorMessage(consumeResult);
+                    bool produced = await ProduceErrorMessage(consumeResult);
 
-                    if (Options.CommitErrorMessages)
-                        Consumer?.Commit(consumeResult);
+                    if (produced && Options.CommitErrorMessages)
+                        SafeCommit(consumeResult);
 
                     Logger?.LogError(e, "Consume operation reached maximum retry count for {topic}", consumeResult.Topic);
                     return;
@@ -101,15 +97,39 @@ public class KafkasRunner<TMessage> : KafkasRunner
         }
     }
 
-    private async Task ProduceErrorMessage(ConsumeResult<Null, string> consumeResult)
+    private async Task<bool> ProduceErrorMessage(ConsumeResult<Null, string> consumeResult)
     {
         if (Options == null || Producer == null || !Options.UseErrorTopics)
-            return;
+            return true;
 
         string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage), consumeResult.TopicPartition, consumeResult.TopicPartitionOffset));
 
         if (errorTopicName != null)
-            await Producer?.ProduceAsync(errorTopicName, consumeResult.Message)!;
+        {
+            try
+            {
+                await Producer?.ProduceAsync(errorTopicName, consumeResult.Message)!;
+            }
+            catch (Exception e)
+            {
+                Logger?.LogCritical(e, "ProduceErrorMessage Failed");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void SafeCommit(ConsumeResult<Null, string> consumeResult)
+    {
+        try
+        {
+            Consumer?.Commit(consumeResult);
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "Commit failed message error");
+        }
     }
 
     private int CalculateWaitMilliseconds(int retryCount)
