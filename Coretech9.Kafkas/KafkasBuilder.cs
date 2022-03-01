@@ -223,12 +223,12 @@ public class KafkasBuilder
     private ConsumerConfig CreateConsumerConfig(ConsumerOptions options)
     {
         ConsumerConfig config = new ConsumerConfig();
+        config.GroupId = options.ConsumerGroupId;
 
         if (Configuration != null)
             ReadFromConfiguration(config, $"{_rootSection}:Consumer");
 
         _consumerConfigAction?.Invoke(config);
-        config.GroupId = options.ConsumerGroupId;
         return config;
     }
 
