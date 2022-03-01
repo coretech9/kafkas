@@ -177,6 +177,7 @@ public class KafkasBuilder
     private ConsumerOptions CreateConsumerOptions(Type consumerType)
     {
         ConsumerOptions options = new ConsumerOptions();
+        options.ErrorTopicGenerator = m => $"{m.TopicPartition.Topic}_Error";
 
         if (Configuration != null)
         {
