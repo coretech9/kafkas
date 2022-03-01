@@ -16,6 +16,7 @@ public class KafkasProducer : IHostedService
     private IAdminClient? _adminClient;
     private readonly List<string> _checkingErrorTopics = new List<string>();
     private ILogger<KafkasProducer>? _logger;
+    private Metadata _metadata;
 
     /// <summary>
     /// Initializes producer and admin kafka clients
@@ -73,12 +74,14 @@ public class KafkasProducer : IHostedService
             return;
         }
 
-        Metadata metadata = _adminClient.GetMetadata(TimeSpan.FromSeconds(30));
+        if (_metadata == null)
+            _metadata = _adminClient.GetMetadata(TimeSpan.FromSeconds(30));
+
         List<TopicSpecification> list = new List<TopicSpecification>();
 
         if (!string.IsNullOrEmpty(errorTopicName))
         {
-            TopicMetadata? topicMetadata = metadata.Topics.FirstOrDefault(x => x.Topic == errorTopicName);
+            TopicMetadata? topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == errorTopicName);
 
             if (topicMetadata == null)
                 list.Add(new TopicSpecification {Name = errorTopicName});
@@ -88,7 +91,7 @@ public class KafkasProducer : IHostedService
         {
             foreach (string topic in _checkingErrorTopics)
             {
-                TopicMetadata? m = metadata.Topics.FirstOrDefault(x => x.Topic == topic);
+                TopicMetadata? m = _metadata.Topics.FirstOrDefault(x => x.Topic == topic);
                 if (m == null)
                     list.Add(new TopicSpecification {Name = topic});
             }
@@ -98,6 +101,30 @@ public class KafkasProducer : IHostedService
 
         if (list.Count > 0)
             await _adminClient.CreateTopicsAsync(list);
+    }
+
+    internal async Task CheckAndCreateTopic(string topicName)
+    {
+        try
+        {
+            if (_adminClient == null)
+                return;
+
+            if (_metadata == null)
+                _metadata = _adminClient.GetMetadata(TimeSpan.FromSeconds(30));
+
+            TopicMetadata? topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == topicName);
+
+            if (topicMetadata == null)
+            {
+                List<TopicSpecification> list = new List<TopicSpecification> {new TopicSpecification {Name = topicName}};
+                await _adminClient.CreateTopicsAsync(list);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger?.LogError(e, "CheckAndCreateTopic error for {topic}", topicName);
+        }
     }
 
     /// <summary>

@@ -15,10 +15,14 @@ public class KafkasBuilder
     private Action<ProducerConfig>? _producerConfigAction;
     private Action<ConsumerOptions>? _consumerOptionsAction;
     private readonly IServiceCollection _services;
-    public IConfiguration? Configuration { get; }
     private string _rootSection = "Kafkas";
     internal KafkasProducer Producer { get; }
 
+    /// <summary>
+    /// IHost Configuration
+    /// </summary>
+    public IConfiguration? Configuration { get; }
+    
     /// <summary>
     /// Creates new kafkas builder
     /// </summary>
@@ -187,6 +191,7 @@ public class KafkasBuilder
             options.RetryWaitMilliseconds = section.GetValue<int>("RetryWaitMilliseconds");
             options.CommitErrorMessages = section.GetValue<bool>("CommitErrorMessages");
             options.RetryWaitStrategy = section.GetValue<WaitStrategy>("RetryDelayStrategy");
+            options.UseErrorTopics = section.GetValue<bool>("UseErrorTopics");
         }
 
         _consumerOptionsAction?.Invoke(options);

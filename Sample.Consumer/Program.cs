@@ -6,11 +6,6 @@ IHost host = Host.CreateDefaultBuilder()
     .UseKafkas(builder =>
     {
         builder.AddConsumers(typeof(Program));
-
-        builder.AddConsumer<FooConsumer, Foo>(o =>
-        {
-            o.Topic = "CustomTopic";
-        });
     })
     .Build();
 

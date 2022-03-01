@@ -23,6 +23,7 @@ public class KafkasRunner<TMessage> : KafkasRunner
     public override void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig, KafkasProducer producer)
     {
         Logger = provider.GetService<ILogger<KafkasRunner>>();
+        MessageType = typeof(TMessage);
         base.Initialize(provider, consumerType, options, consumerConfig, producer);
     }
 
@@ -187,9 +188,17 @@ public abstract class KafkasRunner : IHostedService
     /// <summary>
     /// Consumer Type
     /// </summary>
-    protected Type ConsumerType { get; private set; }
+    protected Type? ConsumerType { get; private set; }
 
-    public KafkasProducer Producer { get; private set; }
+    /// <summary>
+    /// Kafkas Producer and Admin Client Manager
+    /// </summary>
+    public KafkasProducer? Producer { get; private set; }
+
+    /// <summary>
+    /// Consuming Message Type
+    /// </summary>
+    protected Type? MessageType { get; set; }
 
     /// <summary>
     /// Initializes kafka runner
@@ -198,6 +207,7 @@ public abstract class KafkasRunner : IHostedService
     /// <param name="consumerType">Consumer Type</param>
     /// <param name="options">Consumer options</param>
     /// <param name="consumerConfig">Consumer kafka client config</param>
+    /// <param name="producer">Kafka producer and admin client manager</param>
     public virtual void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig, KafkasProducer producer)
     {
         ServiceProvider = provider;
@@ -215,21 +225,24 @@ public abstract class KafkasRunner : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         Consumer = new ConsumerBuilder<Null, string>(_consumerConfig).Build();
+
+        if (Producer != null)
+            await Producer.CheckAndCreateTopic(Options.Topic);
+        
         Consumer.Subscribe(Options.Topic);
 
         if (Options.UseErrorTopics)
         {
-            Type messageType = ConsumerType.GetGenericArguments().First();
             TopicPartition partition = new TopicPartition(Options.Topic, Partition.Any);
             TopicPartitionOffset offset = new TopicPartitionOffset(partition, new Offset(0));
-            ConsumingMessageMeta meta = new ConsumingMessageMeta(messageType, partition, offset);
+            ConsumingMessageMeta meta = new ConsumingMessageMeta(MessageType, partition, offset);
 
             string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(meta);
 
             if (!string.IsNullOrEmpty(errorTopicName))
                 await Producer.CheckErrorTopic(errorTopicName);
         }
-        
+
         _ = Task.Run(RunConsumer, cancellationToken);
     }
 
