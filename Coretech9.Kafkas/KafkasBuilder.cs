@@ -15,7 +15,7 @@ public class KafkasBuilder
     private Action<ProducerConfig>? _producerConfigAction;
     private Action<ConsumerOptions>? _consumerOptionsAction;
     private readonly IServiceCollection _services;
-    private IConfiguration? Configuration { get; }
+    public IConfiguration? Configuration { get; }
     private string _rootSection = "Kafkas";
 
     /// <summary>
