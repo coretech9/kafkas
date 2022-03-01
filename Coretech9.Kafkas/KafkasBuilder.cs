@@ -17,6 +17,7 @@ public class KafkasBuilder
     private readonly IServiceCollection _services;
     public IConfiguration? Configuration { get; }
     private string _rootSection = "Kafkas";
+    internal KafkasProducer Producer { get; }
 
     /// <summary>
     /// Creates new kafkas builder
@@ -27,6 +28,7 @@ public class KafkasBuilder
     {
         _services = services;
         Configuration = configuration;
+        Producer = new KafkasProducer();
     }
 
     /// <summary>
@@ -169,9 +171,7 @@ public class KafkasBuilder
             func(options);
         
         ConsumerConfig consumerConfig = CreateConsumerConfig(options);
-        ProducerConfig? producerConfig = CreateProducerConfig(consumerConfig);
-
-        runner.Initialize(provider, consumerType, options, consumerConfig, producerConfig);
+        runner.Initialize(provider, consumerType, options, consumerConfig, Producer);
     }
 
     private ConsumerOptions CreateConsumerOptions(Type consumerType)
@@ -254,18 +254,12 @@ public class KafkasBuilder
         }
     }
 
-    private ProducerConfig? CreateProducerConfig(ConsumerConfig consumerConfig)
+    internal ProducerConfig CreateProducerConfig()
     {
         ProducerConfig config = new ProducerConfig();
 
         if (Configuration != null)
             ReadFromConfiguration(config, $"{_rootSection}:Producer");
-
-        config.BootstrapServers = consumerConfig.BootstrapServers;
-        config.SecurityProtocol = consumerConfig.SecurityProtocol;
-        config.SaslMechanism = consumerConfig.SaslMechanism;
-        config.SaslUsername = consumerConfig.SaslUsername;
-        config.SaslPassword = consumerConfig.SaslPassword;
 
         _producerConfigAction?.Invoke(config);
         return config;

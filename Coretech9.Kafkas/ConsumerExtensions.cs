@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Coretech9.Kafkas;
 
@@ -16,8 +18,14 @@ public static class ConsumerExtensions
     /// <returns></returns>
     public static IServiceCollection UseKafkas(this IServiceCollection services, Action<KafkasBuilder> cfg)
     {
-        KafkasBuilder context = new KafkasBuilder(services, null);
-        cfg(context);
+        KafkasBuilder builder = new KafkasBuilder(services, null);
+        services.AddHostedService(p =>
+        {
+            ProducerConfig config = builder.CreateProducerConfig();
+            builder.Producer.Initialize(config, p.GetService<ILogger<KafkasProducer>>());
+            return builder.Producer;
+        });
+        cfg(builder);
         return services;
     }
 
@@ -31,8 +39,13 @@ public static class ConsumerExtensions
     {
         host.ConfigureServices((context, services) =>
         {
-            KafkasBuilder kafkasBuilder = new KafkasBuilder(services, context.Configuration);
-            cfg(kafkasBuilder);
+            KafkasBuilder builder = new KafkasBuilder(services, context.Configuration);
+            services.AddHostedService(p =>
+            {
+                builder.Producer.Initialize(builder.CreateProducerConfig(), p.GetService<ILogger<KafkasProducer>>());
+                return builder.Producer;
+            });
+            cfg(builder);
         });
 
         return host;
