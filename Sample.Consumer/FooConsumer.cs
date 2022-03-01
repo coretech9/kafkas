@@ -13,4 +13,9 @@ public class FooConsumer : ITopicConsumer<Foo>
     {
         throw new NotImplementedException();
     }
+    
+    public Task RetryFallback(ConsumeContext<Foo> consumeContext, Exception exception)
+    {
+        return Task.CompletedTask;
+    }
 }

@@ -7,14 +7,14 @@
         <Nullable>enable</Nullable>
         <Title>Coretech9.Kafkas</Title>
         <Product>Coretech9.Kafkas</Product>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
-        <FileVersion>1.0.0</FileVersion>
-        <PackageVersion>1.0.0</PackageVersion>
+        <AssemblyVersion>1.0.1</AssemblyVersion>
+        <FileVersion>1.0.1</FileVersion>
+        <PackageVersion>1.0.1</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Coretech9;Ertuğrul Helvacıköylü;Mehmet Helvacıköylü</Authors>
-        <PackageProjectUrl>https://github.com/coretech9/Kafkas</PackageProjectUrl>
-        <PackageLicense>https://github.com/coretech9/Kafkas/blob/master/LICENSE</PackageLicense>
-        <RepositoryUrl>https://github.com/coretech9/Kafkas</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/coretech9/kafkas</PackageProjectUrl>
+        <PackageLicense>https://github.com/coretech9/kafkas/blob/main/LICENSE</PackageLicense>
+        <RepositoryUrl>https://github.com/coretech9/kafkas</RepositoryUrl>
         <Description>C# Consumer Client Implementation for Apache Kafka</Description>
         <PackageTags>apache,kafka,consumer,producer</PackageTags>
     </PropertyGroup>

@@ -94,6 +94,25 @@ public class KafkasBuilder
     }
 
     /// <summary>
+    /// Adds a consumer
+    /// </summary>
+    /// <typeparam name="TConsumer">Consumer type</typeparam>
+    /// <typeparam name="TMessage">Consuming message type</typeparam>
+    /// <returns></returns>
+    public KafkasBuilder AddConsumer<TConsumer, TMessage>(Action<ConsumerOptions> options) where TConsumer : class, ITopicConsumer<TMessage>
+    {
+        KafkasRunner<TMessage> runner = new KafkasRunner<TMessage>();
+        _services.AddScoped<TConsumer>();
+        _services.AddHostedService(p =>
+        {
+            InitializeKafkaRunner(p, runner, typeof(TConsumer), options);
+            return runner;
+        });
+
+        return this;
+    }
+
+    /// <summary>
     /// Adds all consumers in specified assemblies
     /// </summary>
     /// <param name="assemblyTypes">Types in assemblies</param>
@@ -142,9 +161,13 @@ public class KafkasBuilder
         return this;
     }
 
-    private void InitializeKafkaRunner(IServiceProvider provider, KafkasRunner runner, Type consumerType)
+    private void InitializeKafkaRunner(IServiceProvider provider, KafkasRunner runner, Type consumerType, Action<ConsumerOptions>? func = null)
     {
         ConsumerOptions options = CreateConsumerOptions(consumerType);
+
+        if (func != null)
+            func(options);
+        
         ConsumerConfig consumerConfig = CreateConsumerConfig(options);
         ProducerConfig? producerConfig = CreateProducerConfig(consumerConfig);
 
