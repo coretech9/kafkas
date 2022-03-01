@@ -15,7 +15,7 @@ public class KafkasBuilder
     private Action<ProducerConfig>? _producerConfigAction;
     private Action<ConsumerOptions>? _consumerOptionsAction;
     private readonly IServiceCollection _services;
-    private readonly IConfiguration? _configuration;
+    private IConfiguration? Configuration { get; }
     private string _rootSection = "Kafkas";
 
     /// <summary>
@@ -26,7 +26,7 @@ public class KafkasBuilder
     public KafkasBuilder(IServiceCollection services, IConfiguration? configuration)
     {
         _services = services;
-        _configuration = configuration;
+        Configuration = configuration;
     }
 
     /// <summary>
@@ -171,16 +171,16 @@ public class KafkasBuilder
         ConsumerConfig consumerConfig = CreateConsumerConfig(options);
         ProducerConfig? producerConfig = CreateProducerConfig(consumerConfig);
 
-        runner.Initialize(provider, options, consumerConfig, producerConfig);
+        runner.Initialize(provider, consumerType, options, consumerConfig, producerConfig);
     }
 
     private ConsumerOptions CreateConsumerOptions(Type consumerType)
     {
         ConsumerOptions options = new ConsumerOptions();
 
-        if (_configuration != null)
+        if (Configuration != null)
         {
-            IConfigurationSection section = _configuration.GetSection($"{_rootSection}:Options");
+            IConfigurationSection section = Configuration.GetSection($"{_rootSection}:Options");
             options.ConsumerGroupId = section.GetValue<string>("ConsumerGroupId");
             options.RetryCount = section.GetValue<int>("RetryCount");
             options.RetryWaitMilliseconds = section.GetValue<int>("RetryWaitMilliseconds");
@@ -223,7 +223,7 @@ public class KafkasBuilder
     {
         ConsumerConfig config = new ConsumerConfig();
 
-        if (_configuration != null)
+        if (Configuration != null)
             ReadFromConfiguration(config, $"{_rootSection}:Consumer");
 
         _consumerConfigAction?.Invoke(config);
@@ -233,10 +233,10 @@ public class KafkasBuilder
 
     private void ReadFromConfiguration<TConfig>(TConfig config, string path) where TConfig : class
     {
-        if (_configuration == null)
+        if (Configuration == null)
             return;
 
-        IConfigurationSection section = _configuration.GetSection(path);
+        IConfigurationSection section = Configuration.GetSection(path);
 
         if (section != null)
         {
@@ -257,7 +257,7 @@ public class KafkasBuilder
     {
         ProducerConfig config = new ProducerConfig();
 
-        if (_configuration != null)
+        if (Configuration != null)
             ReadFromConfiguration(config, $"{_rootSection}:Producer");
 
         config.BootstrapServers = consumerConfig.BootstrapServers;

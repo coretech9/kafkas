@@ -16,13 +16,14 @@ public class KafkasRunner<TMessage> : KafkasRunner
     /// Initializes kafka runner
     /// </summary>
     /// <param name="provider">MSDI Service provider</param>
+    /// <param name="consumerType">Consumer Type</param>
     /// <param name="options">Consumer options</param>
     /// <param name="consumerConfig">Consumer kafka client config</param>
     /// <param name="producerConfig">Producer kafka client config</param>
-    public override void Initialize(IServiceProvider provider, ConsumerOptions options, ConsumerConfig consumerConfig, ProducerConfig? producerConfig)
+    public override void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig, ProducerConfig? producerConfig)
     {
         Logger = provider.GetService<ILogger<KafkasRunner>>();
-        base.Initialize(provider, options, consumerConfig, producerConfig);
+        base.Initialize(provider, consumerType, options, consumerConfig, producerConfig);
     }
 
     /// <summary>
@@ -63,7 +64,7 @@ public class KafkasRunner<TMessage> : KafkasRunner
             try
             {
                 using IServiceScope scope = ServiceProvider.CreateScope();
-                messageConsumer = scope.ServiceProvider.GetService<ITopicConsumer<TMessage>>();
+                messageConsumer = (ITopicConsumer<TMessage>?) scope.ServiceProvider.GetService(ConsumerType);
 
                 if (messageConsumer == null)
                     throw new ArgumentNullException($"TopicConsumer is not registered for {typeof(TMessage).FullName}");
@@ -170,17 +171,24 @@ public abstract class KafkasRunner : IHostedService
     /// Service provider for MSDI
     /// </summary>
     protected IServiceProvider? ServiceProvider { get; private set; }
+    
+    /// <summary>
+    /// Consumer Type
+    /// </summary>
+    protected Type ConsumerType { get; private set; }
 
     /// <summary>
     /// Initializes kafka runner
     /// </summary>
     /// <param name="provider">MSDI Service provider</param>
+    /// <param name="consumerType">Consumer Type</param>
     /// <param name="options">Consumer options</param>
     /// <param name="consumerConfig">Consumer kafka client config</param>
     /// <param name="producerConfig">Producer kafka client config</param>
-    public virtual void Initialize(IServiceProvider provider, ConsumerOptions options, ConsumerConfig consumerConfig, ProducerConfig? producerConfig)
+    public virtual void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig, ProducerConfig? producerConfig)
     {
         ServiceProvider = provider;
+        ConsumerType = consumerType;
         Options = options;
         _consumerConfig = consumerConfig;
         _producerConfig = producerConfig;
