@@ -10,7 +10,8 @@ namespace Coretech9.Kafkas;
 /// Manages a type of consumer and all operations
 /// </summary>
 /// <typeparam name="TMessage">Consuming message type</typeparam>
-public class KafkasRunner<TMessage> : KafkasRunner
+/// <typeparam name="TConsumer">Consumer type</typeparam>
+public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 {
     /// <summary>
     /// Initializes kafka runner
@@ -228,7 +229,7 @@ public abstract class KafkasRunner : IHostedService
 
         if (Producer != null)
             await Producer.CheckAndCreateTopic(Options.Topic);
-        
+
         Consumer.Subscribe(Options.Topic);
 
         if (Options.UseErrorTopics)
@@ -239,7 +240,7 @@ public abstract class KafkasRunner : IHostedService
 
             string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(meta);
 
-            if (!string.IsNullOrEmpty(errorTopicName))
+            if (!string.IsNullOrEmpty(errorTopicName) && Producer != null)
                 await Producer.CheckErrorTopic(errorTopicName);
         }
 

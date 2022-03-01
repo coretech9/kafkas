@@ -5,7 +5,15 @@ using Sample.Consumer;
 IHost host = Host.CreateDefaultBuilder()
     .UseKafkas(builder =>
     {
-        builder.AddConsumers(typeof(Program));
+        builder.AddConsumer<FooConsumer, Foo>(o =>
+        {
+            o.Partition = 4;
+        });
+        
+        builder.AddConsumer<FooConsumer2, Foo>(o =>
+        {
+            o.Partition = 5;
+        });
     })
     .Build();
 

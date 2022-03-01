@@ -22,7 +22,7 @@ public class KafkasBuilder
     /// IHost Configuration
     /// </summary>
     public IConfiguration? Configuration { get; }
-    
+
     /// <summary>
     /// Creates new kafkas builder
     /// </summary>
@@ -88,7 +88,7 @@ public class KafkasBuilder
     /// <returns></returns>
     public KafkasBuilder AddConsumer<TConsumer, TMessage>() where TConsumer : class, ITopicConsumer<TMessage>
     {
-        KafkasRunner<TMessage> runner = new KafkasRunner<TMessage>();
+        KafkasRunner<TConsumer, TMessage> runner = new KafkasRunner<TConsumer, TMessage>();
         _services.AddScoped<TConsumer>();
         _services.AddHostedService(p =>
         {
@@ -107,10 +107,12 @@ public class KafkasBuilder
     /// <returns></returns>
     public KafkasBuilder AddConsumer<TConsumer, TMessage>(Action<ConsumerOptions> options) where TConsumer : class, ITopicConsumer<TMessage>
     {
-        KafkasRunner<TMessage> runner = new KafkasRunner<TMessage>();
+        KafkasRunner<TConsumer, TMessage> runner = new KafkasRunner<TConsumer, TMessage>();
         _services.AddScoped<TConsumer>();
+        Console.WriteLine("adding hosted service for " + typeof(TConsumer));
         _services.AddHostedService(p =>
         {
+            Console.WriteLine("initializing hosted service for " + typeof(TConsumer));
             InitializeKafkaRunner(p, runner, typeof(TConsumer), options);
             return runner;
         });
@@ -147,7 +149,7 @@ public class KafkasBuilder
                         if (modelType == null)
                             throw new ArgumentNullException($"Topic consumer model type is null for {type}");
 
-                        Type runnerType = typeof(KafkasRunner<>).MakeGenericType(modelType);
+                        Type runnerType = typeof(KafkasRunner<,>).MakeGenericType(type, modelType);
                         KafkasRunner? runner = Activator.CreateInstance(runnerType) as KafkasRunner;
 
                         if (runner == null)
@@ -173,7 +175,7 @@ public class KafkasBuilder
 
         if (func != null)
             func(options);
-        
+
         ConsumerConfig consumerConfig = CreateConsumerConfig(options);
         runner.Initialize(provider, consumerType, options, consumerConfig, Producer);
     }
