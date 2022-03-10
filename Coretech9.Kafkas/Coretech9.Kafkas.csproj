@@ -7,9 +7,9 @@
         <Nullable>enable</Nullable>
         <Title>Coretech9.Kafkas</Title>
         <Product>Coretech9.Kafkas</Product>
-        <AssemblyVersion>1.0.7</AssemblyVersion>
-        <FileVersion>1.0.7</FileVersion>
-        <PackageVersion>1.0.7</PackageVersion>
+        <AssemblyVersion>1.0.9</AssemblyVersion>
+        <FileVersion>1.1.0</FileVersion>
+        <PackageVersion>1.1.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Coretech9;Ertuğrul Helvacıköylü;Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/coretech9/kafkas</PackageProjectUrl>

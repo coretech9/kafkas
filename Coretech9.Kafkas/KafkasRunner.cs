@@ -1,7 +1,6 @@
 ﻿using Confluent.Kafka;
 using Coretech9.Kafkas.Annotations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Coretech9.Kafkas;
@@ -151,12 +150,20 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
                 return Options.RetryWaitMilliseconds;
         }
     }
+
+    /// <summary>
+    /// Returns consumer type name
+    /// </summary>
+    public override string ToString()
+    {
+        return typeof(TConsumer).FullName ?? "KafkasRunner";
+    }
 }
 
 /// <summary>
 /// Manages a type of consumer and all operations
 /// </summary>
-public abstract class KafkasRunner : IHostedService
+public abstract class KafkasRunner
 {
     private ConsumerConfig? _consumerConfig;
     private bool _busy;
@@ -225,23 +232,30 @@ public abstract class KafkasRunner : IHostedService
     /// <returns></returns>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        Consumer = new ConsumerBuilder<Null, string>(_consumerConfig).Build();
-
-        if (Producer != null)
-            await Producer.CheckAndCreateTopic(Options.Topic);
-
-        Consumer.Subscribe(Options.Topic);
-
-        if (Options.UseErrorTopics)
+        try
         {
-            TopicPartition partition = new TopicPartition(Options.Topic, Partition.Any);
-            TopicPartitionOffset offset = new TopicPartitionOffset(partition, new Offset(0));
-            ConsumingMessageMeta meta = new ConsumingMessageMeta(MessageType, partition, offset);
+            Consumer = new ConsumerBuilder<Null, string>(_consumerConfig).Build();
 
-            string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(meta);
+            if (Producer != null)
+                await Producer.CheckAndCreateTopic(Options.Topic);
 
-            if (!string.IsNullOrEmpty(errorTopicName) && Producer != null)
-                await Producer.CheckErrorTopic(errorTopicName);
+            Consumer.Subscribe(Options.Topic);
+
+            if (Options.UseErrorTopics)
+            {
+                TopicPartition partition = new TopicPartition(Options.Topic, Partition.Any);
+                TopicPartitionOffset offset = new TopicPartitionOffset(partition, new Offset(0));
+                ConsumingMessageMeta meta = new ConsumingMessageMeta(MessageType, partition, offset);
+
+                string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(meta);
+
+                if (!string.IsNullOrEmpty(errorTopicName) && Producer != null)
+                    await Producer.CheckErrorTopic(errorTopicName);
+            }
+        }
+        catch (Exception e)
+        {
+            Logger?.LogCritical(e, "KafkasRunner Intiailization Error");
         }
 
         _ = Task.Run(RunConsumer, cancellationToken);
@@ -277,7 +291,11 @@ public abstract class KafkasRunner : IHostedService
         _busy = true;
 
         if (Consumer == null)
+        {
+            Logger?.LogCritical("Kafkas is not initialized for {type}", GetType().ToString());
+            await Task.Delay(1500);
             throw new ArgumentNullException($"Kafkas is not initialized for {GetType()}");
+        }
 
         while (Running)
         {

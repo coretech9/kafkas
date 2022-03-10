@@ -15,7 +15,9 @@ public class KafkasBuilder
     private Action<ProducerConfig>? _producerConfigAction;
     private Action<ConsumerOptions>? _consumerOptionsAction;
     private readonly IServiceCollection _services;
-    private string _rootSection = "Kafkas";
+    private readonly KafkasHostedService _hostedService;
+    private string _rootSection = "Kafkas"; 
+
     internal KafkasProducer Producer { get; }
 
     /// <summary>
@@ -33,6 +35,12 @@ public class KafkasBuilder
         _services = services;
         Configuration = configuration;
         Producer = new KafkasProducer();
+        _hostedService = new KafkasHostedService();
+        services.AddHostedService(p =>
+        {
+            _hostedService.SetServiceProvider(p);
+            return _hostedService;
+        });
     }
 
     /// <summary>
@@ -90,12 +98,7 @@ public class KafkasBuilder
     {
         KafkasRunner<TConsumer, TMessage> runner = new KafkasRunner<TConsumer, TMessage>();
         _services.AddScoped<TConsumer>();
-        _services.AddHostedService(p =>
-        {
-            InitializeKafkaRunner(p, runner, typeof(TConsumer));
-            return runner;
-        });
-
+        _hostedService.AddRunner(runner, p => InitializeKafkaRunner(p, runner, typeof(TConsumer)));
         return this;
     }
 
@@ -109,14 +112,7 @@ public class KafkasBuilder
     {
         KafkasRunner<TConsumer, TMessage> runner = new KafkasRunner<TConsumer, TMessage>();
         _services.AddScoped<TConsumer>();
-        Console.WriteLine("adding hosted service for " + typeof(TConsumer));
-        _services.AddHostedService(p =>
-        {
-            Console.WriteLine("initializing hosted service for " + typeof(TConsumer));
-            InitializeKafkaRunner(p, runner, typeof(TConsumer), options);
-            return runner;
-        });
-
+        _hostedService.AddRunner(runner, p => InitializeKafkaRunner(p, runner, typeof(TConsumer), options));
         return this;
     }
 
@@ -156,11 +152,7 @@ public class KafkasBuilder
                             throw new ArgumentNullException($"No valid model type for kafka runner {type}");
 
                         _services.AddScoped(type, type);
-                        _services.AddHostedService(p =>
-                        {
-                            InitializeKafkaRunner(p, runner, type);
-                            return runner;
-                        });
+                        _hostedService.AddRunner(runner, p => InitializeKafkaRunner(p, runner, type));
                     }
                 }
             }

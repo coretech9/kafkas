@@ -1,4 +1,5 @@
-﻿using Confluent.Kafka;
+﻿using System.Runtime.InteropServices;
+using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -68,8 +69,9 @@ public class KafkasProducer : IHostedService
     {
         if (_adminClient == null)
         {
-            lock (_checkingErrorTopics)
-                _checkingErrorTopics.Add(errorTopicName);
+            if (!string.IsNullOrEmpty(errorTopicName))
+                lock (_checkingErrorTopics)
+                    _checkingErrorTopics.Add(errorTopicName);
 
             return;
         }
@@ -91,6 +93,9 @@ public class KafkasProducer : IHostedService
         {
             foreach (string topic in _checkingErrorTopics)
             {
+                if (string.IsNullOrEmpty(topic))
+                    continue;
+                
                 TopicMetadata? m = _metadata.Topics.FirstOrDefault(x => x.Topic == topic);
                 if (m == null)
                     list.Add(new TopicSpecification {Name = topic});
