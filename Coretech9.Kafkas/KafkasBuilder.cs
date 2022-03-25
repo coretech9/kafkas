@@ -175,7 +175,7 @@ public class KafkasBuilder
     private ConsumerOptions CreateConsumerOptions(Type consumerType)
     {
         ConsumerOptions options = new ConsumerOptions();
-        options.ErrorTopicGenerator = m => $"{m.TopicPartition.Topic}_Error";
+        options.ErrorTopicGenerator = m => new Tuple<string, int>($"{m.TopicPartition.Topic}_Error", 1);
 
         if (Configuration != null)
         {
@@ -207,7 +207,7 @@ public class KafkasBuilder
             options.ConsumerGroupId = groupIdAttribute.ConsumerGroupId;
 
         if (errorTopicAttribute != null)
-            options.ErrorTopicGenerator = _ => errorTopicAttribute.Topic;
+            options.ErrorTopicGenerator = _ => new Tuple<string, int>(errorTopicAttribute.Topic, errorTopicAttribute.PartitionCount);
 
         if (retryAttribute != null)
         {

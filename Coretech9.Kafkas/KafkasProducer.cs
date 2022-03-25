@@ -15,7 +15,7 @@ public class KafkasProducer : IHostedService
     private ProducerConfig? _producerConfig;
     private IProducer<Null, string>? _producer;
     private IAdminClient? _adminClient;
-    private readonly List<string> _checkingErrorTopics = new List<string>();
+    private readonly List<Tuple<string, int>> _checkingErrorTopics = new List<Tuple<string, int>>();
     private ILogger<KafkasProducer>? _logger;
     private Metadata _metadata;
 
@@ -65,13 +65,13 @@ public class KafkasProducer : IHostedService
     /// Checks error topic name.
     /// If not exists, creates the topic with default partition count.
     /// </summary>
-    public async Task CheckErrorTopic(string errorTopicName)
+    public async Task CheckErrorTopic(string errorTopicName, int partitionCount)
     {
         if (_adminClient == null)
         {
             if (!string.IsNullOrEmpty(errorTopicName))
                 lock (_checkingErrorTopics)
-                    _checkingErrorTopics.Add(errorTopicName);
+                    _checkingErrorTopics.Add(new Tuple<string, int>(errorTopicName, partitionCount));
 
             return;
         }
@@ -86,19 +86,19 @@ public class KafkasProducer : IHostedService
             TopicMetadata? topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == errorTopicName);
 
             if (topicMetadata == null)
-                list.Add(new TopicSpecification {Name = errorTopicName});
+                list.Add(new TopicSpecification {Name = errorTopicName, NumPartitions = partitionCount});
         }
 
         lock (_checkingErrorTopics)
         {
-            foreach (string topic in _checkingErrorTopics)
+            foreach (Tuple<string, int> topic in _checkingErrorTopics)
             {
-                if (string.IsNullOrEmpty(topic))
+                if (string.IsNullOrEmpty(topic.Item1))
                     continue;
-                
-                TopicMetadata? m = _metadata.Topics.FirstOrDefault(x => x.Topic == topic);
+
+                TopicMetadata? m = _metadata.Topics.FirstOrDefault(x => x.Topic == topic.Item1);
                 if (m == null)
-                    list.Add(new TopicSpecification {Name = topic});
+                    list.Add(new TopicSpecification {Name = topic.Item1, NumPartitions = topic.Item2});
             }
 
             _checkingErrorTopics.Clear();
@@ -138,7 +138,7 @@ public class KafkasProducer : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
-        await CheckErrorTopic(string.Empty);
+        await CheckErrorTopic(string.Empty, 1);
     }
 
     /// <summary>

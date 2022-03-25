@@ -103,13 +103,16 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         if (Options == null || Producer == null || !Options.UseErrorTopics)
             return true;
 
-        string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage), consumeResult.TopicPartition, consumeResult.TopicPartitionOffset));
+        Tuple<string, int> errorTopic = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage),
+                                            consumeResult.TopicPartition,
+                                            consumeResult.TopicPartitionOffset))
+                                        ?? new Tuple<string, int>(string.Empty, 0);
 
-        if (errorTopicName != null)
+        if (!string.IsNullOrEmpty(errorTopic.Item1))
         {
             try
             {
-                await Producer?.ProduceErrorMessage(errorTopicName, consumeResult)!;
+                await Producer?.ProduceErrorMessage(errorTopic.Item1, consumeResult)!;
             }
             catch (Exception e)
             {
@@ -247,10 +250,10 @@ public abstract class KafkasRunner
                 TopicPartitionOffset offset = new TopicPartitionOffset(partition, new Offset(0));
                 ConsumingMessageMeta meta = new ConsumingMessageMeta(MessageType, partition, offset);
 
-                string? errorTopicName = Options.ErrorTopicGenerator?.Invoke(meta);
+                Tuple<string, int> errorTopic = Options.ErrorTopicGenerator?.Invoke(meta) ?? new Tuple<string, int>(string.Empty, 0);
 
-                if (!string.IsNullOrEmpty(errorTopicName) && Producer != null)
-                    await Producer.CheckErrorTopic(errorTopicName);
+                if (!string.IsNullOrEmpty(errorTopic.Item1) && Producer != null)
+                    await Producer.CheckErrorTopic(errorTopic.Item1, errorTopic.Item2);
             }
         }
         catch (Exception e)

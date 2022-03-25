@@ -51,5 +51,5 @@ public class ConsumerOptions
     /// <summary>
     /// Error topic generator function
     /// </summary>
-    public Func<ConsumingMessageMeta, string>? ErrorTopicGenerator { get; set; }
+    public Func<ConsumingMessageMeta, Tuple<string, int>>? ErrorTopicGenerator { get; set; }
 }

@@ -12,11 +12,18 @@ public class ErrorTopicAttribute : Attribute
     public string Topic { get; set; }
 
     /// <summary>
+    /// Partition count of error topic
+    /// </summary>
+    public int PartitionCount { get; set; }
+
+    /// <summary>
     /// Creates new error topic attribute
     /// </summary>
     /// <param name="topic">Target topic name for failed messages</param>
-    public ErrorTopicAttribute(string topic)
+    /// <param name="partitionCount">Partition count</param>
+    public ErrorTopicAttribute(string topic, int partitionCount = 1)
     {
         Topic = topic;
+        PartitionCount = partitionCount;
     }
 }
