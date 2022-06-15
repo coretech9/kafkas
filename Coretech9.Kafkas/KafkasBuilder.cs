@@ -11,9 +11,9 @@ namespace Coretech9.Kafkas;
 /// </summary>
 public class KafkasBuilder
 {
-    private Action<ConsumerConfig>? _consumerConfigAction;
-    private Action<ProducerConfig>? _producerConfigAction;
-    private Action<ConsumerOptions>? _consumerOptionsAction;
+    private Action<ConsumerConfig> _consumerConfigAction;
+    private Action<ProducerConfig> _producerConfigAction;
+    private Action<ConsumerOptions> _consumerOptionsAction;
     private readonly IServiceCollection _services;
     private readonly KafkasHostedService _hostedService;
     private string _rootSection = "Kafkas"; 
@@ -23,14 +23,14 @@ public class KafkasBuilder
     /// <summary>
     /// IHost Configuration
     /// </summary>
-    public IConfiguration? Configuration { get; }
+    public IConfiguration Configuration { get; }
 
     /// <summary>
     /// Creates new kafkas builder
     /// </summary>
     /// <param name="services">MSDI services</param>
     /// <param name="configuration">Microsoft.Extensions.Hosting configuration</param>
-    public KafkasBuilder(IServiceCollection services, IConfiguration? configuration)
+    public KafkasBuilder(IServiceCollection services, IConfiguration configuration)
     {
         _services = services;
         Configuration = configuration;
@@ -141,12 +141,12 @@ public class KafkasBuilder
                     if (openGenericType.IsAssignableFrom(generic))
                     {
                         //topic consumer found
-                        Type? modelType = interfaceType.GetGenericArguments().FirstOrDefault();
+                        Type modelType = interfaceType.GetGenericArguments().FirstOrDefault();
                         if (modelType == null)
                             throw new ArgumentNullException($"Topic consumer model type is null for {type}");
 
                         Type runnerType = typeof(KafkasRunner<,>).MakeGenericType(type, modelType);
-                        KafkasRunner? runner = Activator.CreateInstance(runnerType) as KafkasRunner;
+                        KafkasRunner runner = Activator.CreateInstance(runnerType) as KafkasRunner;
 
                         if (runner == null)
                             throw new ArgumentNullException($"No valid model type for kafka runner {type}");
@@ -161,7 +161,7 @@ public class KafkasBuilder
         return this;
     }
 
-    private void InitializeKafkaRunner(IServiceProvider provider, KafkasRunner runner, Type consumerType, Action<ConsumerOptions>? func = null)
+    private void InitializeKafkaRunner(IServiceProvider provider, KafkasRunner runner, Type consumerType, Action<ConsumerOptions> func = null)
     {
         ConsumerOptions options = CreateConsumerOptions(consumerType);
 
@@ -183,17 +183,17 @@ public class KafkasBuilder
             options.ConsumerGroupId = section.GetValue<string>("ConsumerGroupId");
             options.RetryCount = section.GetValue<int>("RetryCount");
             options.RetryWaitMilliseconds = section.GetValue<int>("RetryWaitMilliseconds");
-            options.CommitErrorMessages = section.GetValue<bool>("CommitErrorMessages");
+            options.FailedMessageStrategy = section.GetValue<FailedMessageStrategy>("FailedMessageStrategy");
             options.RetryWaitStrategy = section.GetValue<WaitStrategy>("RetryDelayStrategy");
-            options.UseErrorTopics = section.GetValue<bool>("UseErrorTopics");
+            options.FailedMessageDelay = section.GetValue<int>("FailedMessageDelay");
         }
 
         _consumerOptionsAction?.Invoke(options);
 
-        TopicAttribute? topicAttribute = consumerType.GetCustomAttribute<TopicAttribute>();
-        ConsumerGroupIdAttribute? groupIdAttribute = consumerType.GetCustomAttribute<ConsumerGroupIdAttribute>();
-        ErrorTopicAttribute? errorTopicAttribute = consumerType.GetCustomAttribute<ErrorTopicAttribute>();
-        RetryAttribute? retryAttribute = consumerType.GetCustomAttribute<RetryAttribute>();
+        TopicAttribute topicAttribute = consumerType.GetCustomAttribute<TopicAttribute>();
+        ConsumerGroupIdAttribute groupIdAttribute = consumerType.GetCustomAttribute<ConsumerGroupIdAttribute>();
+        ErrorTopicAttribute errorTopicAttribute = consumerType.GetCustomAttribute<ErrorTopicAttribute>();
+        RetryAttribute retryAttribute = consumerType.GetCustomAttribute<RetryAttribute>();
 
         if (topicAttribute != null)
         {

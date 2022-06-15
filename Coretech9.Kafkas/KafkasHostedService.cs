@@ -7,8 +7,8 @@ namespace Coretech9.Kafkas;
 internal class KafkasHostedService : IHostedService
 {
     private readonly List<KafkasRunnerDescriptor> _runners = new List<KafkasRunnerDescriptor>();
-    private IServiceProvider? _provider;
-    private ILogger<KafkasHostedService>? _logger;
+    private IServiceProvider _provider;
+    private ILogger<KafkasHostedService> _logger;
 
     internal void SetServiceProvider(IServiceProvider provider)
     {

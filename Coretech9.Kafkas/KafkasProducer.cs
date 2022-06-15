@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,11 +11,11 @@ namespace Coretech9.Kafkas;
 /// </summary>
 public class KafkasProducer : IHostedService
 {
-    private ProducerConfig? _producerConfig;
-    private IProducer<Null, string>? _producer;
-    private IAdminClient? _adminClient;
+    private ProducerConfig _producerConfig;
+    private IProducer<Null, string> _producer;
+    private IAdminClient _adminClient;
     private readonly List<Tuple<string, int>> _checkingErrorTopics = new List<Tuple<string, int>>();
-    private ILogger<KafkasProducer>? _logger;
+    private ILogger<KafkasProducer> _logger;
     private Metadata _metadata;
 
     /// <summary>
@@ -24,7 +23,7 @@ public class KafkasProducer : IHostedService
     /// </summary>
     /// <param name="producerConfig">Producer client configuration</param>
     /// <param name="logger">Logger</param>
-    public void Initialize(ProducerConfig producerConfig, ILogger<KafkasProducer>? logger)
+    public void Initialize(ProducerConfig producerConfig, ILogger<KafkasProducer> logger)
     {
         _logger = logger;
         _producerConfig = producerConfig;
@@ -54,7 +53,28 @@ public class KafkasProducer : IHostedService
         }
         catch (Exception e)
         {
-            _logger?.LogCritical(e, "ProduceErrorMessage Failed");
+            _logger?.LogCritical(e, "ProduceErrorMessage Failed: {topic}", errorTopic);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Produce message to error topic
+    /// </summary>
+    /// <param name="topic">Topic name</param>
+    /// <param name="consumeResult">Consuming message</param>
+    /// <returns></returns>
+    public async Task<bool> ProduceMessage(string topic, ConsumeResult<Null, string> consumeResult)
+    {
+        try
+        {
+            await _producer?.ProduceAsync(topic, consumeResult.Message)!;
+        }
+        catch (Exception e)
+        {
+            _logger?.LogCritical(e, "ProduceMessage Failed: {topic}", topic);
             return false;
         }
 
@@ -83,7 +103,7 @@ public class KafkasProducer : IHostedService
 
         if (!string.IsNullOrEmpty(errorTopicName))
         {
-            TopicMetadata? topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == errorTopicName);
+            TopicMetadata topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == errorTopicName);
 
             if (topicMetadata == null)
                 list.Add(new TopicSpecification {Name = errorTopicName, NumPartitions = partitionCount});
@@ -96,7 +116,7 @@ public class KafkasProducer : IHostedService
                 if (string.IsNullOrEmpty(topic.Item1))
                     continue;
 
-                TopicMetadata? m = _metadata.Topics.FirstOrDefault(x => x.Topic == topic.Item1);
+                TopicMetadata m = _metadata.Topics.FirstOrDefault(x => x.Topic == topic.Item1);
                 if (m == null)
                     list.Add(new TopicSpecification {Name = topic.Item1, NumPartitions = topic.Item2});
             }
@@ -118,7 +138,7 @@ public class KafkasProducer : IHostedService
             if (_metadata == null)
                 _metadata = _adminClient.GetMetadata(TimeSpan.FromSeconds(30));
 
-            TopicMetadata? topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == topicName);
+            TopicMetadata topicMetadata = _metadata.Topics.FirstOrDefault(x => x.Topic == topicName);
 
             if (topicMetadata == null)
             {

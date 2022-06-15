@@ -20,7 +20,7 @@ public class ConsumerOptions
     /// <summary>
     /// Consumer group id
     /// </summary>
-    public string? ConsumerGroupId { get; set; }
+    public string ConsumerGroupId { get; set; }
 
     /// <summary>
     /// Retry count
@@ -38,15 +38,21 @@ public class ConsumerOptions
     public WaitStrategy RetryWaitStrategy { get; set; }
 
     /// <summary>
-    /// If true, consume operation will be committed after the message is produced to error topic
+    /// Waits in milliseconds when a message consume operation is failed.
+    /// Default value is 1000. Minimum value is 10.
+    /// Lowering that value may cause unnecessary loop when all messages are failed in partition.
     /// </summary>
-    public bool CommitErrorMessages { get; set; }
-
+    public int FailedMessageDelay { get; set; } = 1000;
+    
     /// <summary>
-    /// If true, sends failed messages to error topics.
-    /// Default error topic name is TopicName_Error
+    /// Failed message stragety.
+    /// Ignore, just ignores the message. The message data will be lost!
+    /// ProduceError, produces the message to speficied error topic and commits the message.
+    /// Reproduce, produces the message to end of the same topic and commits the message.
+    /// Retry, retries forever.
+    /// Stop, stops the consume operations for the consumer.
     /// </summary>
-    public bool UseErrorTopics { get; set; }
+    public FailedMessageStrategy FailedMessageStrategy { get; set; }
 
     /// <summary>
     /// Error topic generator function

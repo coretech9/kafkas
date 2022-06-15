@@ -32,9 +32,9 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
     /// </summary>
     /// <param name="consumeResult">Consuming message</param>
     /// <exception cref="ArgumentNullException">Thrown when message deserialization failed</exception>
-    protected override async Task Execute(ConsumeResult<Null, string> consumeResult)
+    protected override async Task<FailedMessageStrategy?> Execute(ConsumeResult<Null, string> consumeResult)
     {
-        TMessage? model;
+        TMessage model;
         try
         {
             model = System.Text.Json.JsonSerializer.Deserialize<TMessage>(consumeResult.Message.Value);
@@ -45,12 +45,8 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         catch (Exception e)
         {
             Logger?.LogError(e, "Model Serialization error for {topicName}", consumeResult.Topic);
-            bool produced = await ProduceErrorMessage(consumeResult);
-
-            if (produced && Options.CommitErrorMessages)
-                SafeCommit(consumeResult);
-
-            return;
+            FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, e);
+            return strategy;
         }
 
         if (ServiceProvider == null)
@@ -60,12 +56,12 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 
         while (Running)
         {
-            ITopicConsumer<TMessage>? messageConsumer = null;
+            ITopicConsumer<TMessage> messageConsumer = null;
 
             try
             {
                 using IServiceScope scope = ServiceProvider.CreateScope();
-                messageConsumer = (ITopicConsumer<TMessage>?) scope.ServiceProvider.GetService(ConsumerType);
+                messageConsumer = (ITopicConsumer<TMessage>) scope.ServiceProvider.GetService(ConsumerType);
 
                 if (messageConsumer == null)
                     throw new ArgumentNullException($"TopicConsumer is not registered for {typeof(TMessage).FullName}");
@@ -79,15 +75,11 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
             {
                 context.RetryCount++;
 
-                if (context.RetryCount >= Options!.RetryCount)
+                if (context.RetryCount >= Options.RetryCount)
                 {
-                    bool produced = await ProduceErrorMessage(consumeResult);
-
-                    if (produced && Options.CommitErrorMessages)
-                        SafeCommit(consumeResult);
-
+                    FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, e);
                     Logger?.LogError(e, "Consume operation reached maximum retry count for {topic}", consumeResult.Topic);
-                    return;
+                    return strategy;
                 }
 
                 Logger?.LogError(e, "Consume operation is {retryCount} times for {topicName}", context.RetryCount, consumeResult.Topic);
@@ -96,12 +88,70 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
                 await Task.Delay(CalculateWaitMilliseconds(context.RetryCount));
             }
         }
+
+        return null;
+    }
+
+    private async Task<FailedMessageStrategy> ApplyFailStrategy(ConsumeResult<Null, string> consumeResult, Exception exception)
+    {
+        await Task.Delay(Math.Max(10, Options.FailedMessageDelay));
+
+        switch (Options.FailedMessageStrategy)
+        {
+            case FailedMessageStrategy.ProduceError:
+            {
+                bool produced = await ProduceErrorMessage(consumeResult);
+                if (produced)
+                    SafeCommit(consumeResult);
+                else
+                {
+                    await Task.Delay(Math.Max(10, Options.FailedMessageDelay));
+                    return FailedMessageStrategy.Retry;
+                }
+
+                break;
+            }
+
+            case FailedMessageStrategy.Reproduce:
+            {
+                bool produced = await ReproduceMessage(consumeResult);
+                if (produced)
+                    SafeCommit(consumeResult);
+                else
+                {
+                    await Task.Delay(Math.Max(10, Options.FailedMessageDelay));
+                    return FailedMessageStrategy.Retry;
+                }
+
+                break;
+            }
+        }
+
+        return Options.FailedMessageStrategy;
+    }
+
+    private async Task<bool> ReproduceMessage(ConsumeResult<Null, string> consumeResult)
+    {
+        if (Producer == null)
+            return false;
+
+        try
+        {
+            await Producer?.ProduceMessage(Options.Topic, consumeResult)!;
+        }
+        catch (Exception e)
+        {
+            Logger?.LogCritical(e, "ReproduceMessage Failed");
+            return false;
+        }
+
+        return true;
     }
 
     private async Task<bool> ProduceErrorMessage(ConsumeResult<Null, string> consumeResult)
     {
-        if (Options == null || Producer == null || !Options.UseErrorTopics)
-            return true;
+        if (Producer == null)
+            return false;
 
         Tuple<string, int> errorTopic = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage),
                                             consumeResult.TopicPartition,
@@ -168,7 +218,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 /// </summary>
 public abstract class KafkasRunner
 {
-    private ConsumerConfig? _consumerConfig;
+    private ConsumerConfig _consumerConfig;
     private bool _busy;
 
     /// <summary>
@@ -179,7 +229,7 @@ public abstract class KafkasRunner
     /// <summary>
     /// Kafka consumer client
     /// </summary>
-    protected IConsumer<Null, string>? Consumer { get; private set; }
+    protected IConsumer<Null, string> Consumer { get; private set; }
 
     /// <summary>
     /// Runner status
@@ -189,27 +239,27 @@ public abstract class KafkasRunner
     /// <summary>
     /// Logger implementation
     /// </summary>
-    protected ILogger<KafkasRunner>? Logger { get; set; }
+    protected ILogger<KafkasRunner> Logger { get; set; }
 
     /// <summary>
     /// Service provider for MSDI
     /// </summary>
-    protected IServiceProvider? ServiceProvider { get; private set; }
+    protected IServiceProvider ServiceProvider { get; private set; }
 
     /// <summary>
     /// Consumer Type
     /// </summary>
-    protected Type? ConsumerType { get; private set; }
+    protected Type ConsumerType { get; private set; }
 
     /// <summary>
     /// Kafkas Producer and Admin Client Manager
     /// </summary>
-    public KafkasProducer? Producer { get; private set; }
+    public KafkasProducer Producer { get; private set; }
 
     /// <summary>
     /// Consuming Message Type
     /// </summary>
-    protected Type? MessageType { get; set; }
+    protected Type MessageType { get; set; }
 
     /// <summary>
     /// Initializes kafka runner
@@ -244,7 +294,7 @@ public abstract class KafkasRunner
 
             Consumer.Subscribe(Options.Topic);
 
-            if (Options.UseErrorTopics)
+            if (Options.FailedMessageStrategy == FailedMessageStrategy.ProduceError)
             {
                 TopicPartition partition = new TopicPartition(Options.Topic, Partition.Any);
                 TopicPartitionOffset offset = new TopicPartitionOffset(partition, new Offset(0));
@@ -312,7 +362,20 @@ public abstract class KafkasRunner
                     continue;
                 }
 
-                await Execute(result);
+                execute:
+                FailedMessageStrategy? strategy = await Execute(result);
+
+                if (strategy.HasValue)
+                {
+                    if (strategy.Value == FailedMessageStrategy.Stop)
+                        break;
+
+                    if (strategy.Value == FailedMessageStrategy.Retry)
+                    {
+                        await Task.Delay(Options.FailedMessageDelay);
+                        goto execute;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -329,5 +392,5 @@ public abstract class KafkasRunner
     /// </summary>
     /// <param name="consumeResult">Consuming message</param>
     /// <returns></returns>
-    protected abstract Task Execute(ConsumeResult<Null, string> consumeResult);
+    protected abstract Task<FailedMessageStrategy?> Execute(ConsumeResult<Null, string> consumeResult);
 }
