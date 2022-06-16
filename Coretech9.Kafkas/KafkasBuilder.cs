@@ -274,13 +274,10 @@ public class KafkasBuilder
 
     private static T TryGetValue<T>(IConfigurationSection section, string name, T defaultValue)
     {
-        try
-        {
-            return section.GetValue<T>(name);
-        }
-        catch
-        {
+        IConfigurationSection child = section.GetSection(name);
+        if (!child.Exists())
             return defaultValue;
-        }
+
+        return section.GetValue<T>(name);
     }
 }
