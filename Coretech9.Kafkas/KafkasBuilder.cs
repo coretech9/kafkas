@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Coretech9.Kafkas.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Coretech9.Kafkas;
 
@@ -26,13 +27,19 @@ public class KafkasBuilder
     public IConfiguration Configuration { get; }
 
     /// <summary>
+    /// Host Builder Context
+    /// </summary>
+    public HostBuilderContext Context { get; }
+
+    /// <summary>
     /// Creates new kafkas builder
     /// </summary>
     /// <param name="services">MSDI services</param>
     /// <param name="configuration">Microsoft.Extensions.Hosting configuration</param>
-    public KafkasBuilder(IServiceCollection services, IConfiguration configuration)
+    public KafkasBuilder(IServiceCollection services, HostBuilderContext context, IConfiguration configuration)
     {
         _services = services;
+        Context = context;
         Configuration = configuration;
         Producer = new KafkasProducer();
         _hostedService = new KafkasHostedService();

@@ -18,7 +18,7 @@ public static class ConsumerExtensions
     /// <returns></returns>
     public static IServiceCollection UseKafkas(this IServiceCollection services, Action<KafkasBuilder> cfg)
     {
-        KafkasBuilder builder = new KafkasBuilder(services, null);
+        KafkasBuilder builder = new KafkasBuilder(services, null, null);
         services.AddHostedService(p =>
         {
             ProducerConfig config = builder.CreateProducerConfig();
@@ -39,7 +39,7 @@ public static class ConsumerExtensions
     {
         host.ConfigureServices((context, services) =>
         {
-            KafkasBuilder builder = new KafkasBuilder(services, context.Configuration);
+            KafkasBuilder builder = new KafkasBuilder(services, context, context.Configuration);
             services.AddHostedService(p =>
             {
                 builder.Producer.Initialize(builder.CreateProducerConfig(), p.GetService<ILogger<KafkasProducer>>());
