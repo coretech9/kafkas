@@ -17,7 +17,7 @@ public class KafkasBuilder
     private Action<ConsumerOptions> _consumerOptionsAction;
     private readonly IServiceCollection _services;
     private readonly KafkasHostedService _hostedService;
-    private string _rootSection = "Kafkas"; 
+    private string _rootSection = "Kafkas";
 
     internal KafkasProducer Producer { get; }
 
@@ -187,12 +187,13 @@ public class KafkasBuilder
         if (Configuration != null)
         {
             IConfigurationSection section = Configuration.GetSection($"{_rootSection}:Options");
-            options.ConsumerGroupId = section.GetValue<string>("ConsumerGroupId");
-            options.RetryCount = section.GetValue<int>("RetryCount");
-            options.RetryWaitMilliseconds = section.GetValue<int>("RetryWaitMilliseconds");
-            options.FailedMessageStrategy = section.GetValue<FailedMessageStrategy>("FailedMessageStrategy");
-            options.RetryWaitStrategy = section.GetValue<WaitStrategy>("RetryDelayStrategy");
-            options.FailedMessageDelay = section.GetValue<int>("FailedMessageDelay");
+
+            options.ConsumerGroupId = TryGetValue(section, "ConsumerGroupId", "KafkasClient");
+            options.RetryCount = TryGetValue(section, "RetryCount", 0);
+            options.RetryWaitMilliseconds = TryGetValue(section, "RetryWaitMilliseconds", 50);
+            options.RetryWaitStrategy = TryGetValue(section, "RetryDelayStrategy", WaitStrategy.Fixed);
+            options.FailedMessageStrategy = TryGetValue(section, "FailedMessageStrategy", FailedMessageStrategy.Retry);
+            options.FailedMessageDelay = TryGetValue(section, "FailedMessageDelay", 5000);
         }
 
         _consumerOptionsAction?.Invoke(options);
@@ -269,5 +270,17 @@ public class KafkasBuilder
 
         _producerConfigAction?.Invoke(config);
         return config;
+    }
+
+    private static T TryGetValue<T>(IConfigurationSection section, string name, T defaultValue)
+    {
+        try
+        {
+            return section.GetValue<T>(name);
+        }
+        catch
+        {
+            return defaultValue;
+        }
     }
 }
