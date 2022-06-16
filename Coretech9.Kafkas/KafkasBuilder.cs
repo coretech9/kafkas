@@ -35,6 +35,7 @@ public class KafkasBuilder
     /// Creates new kafkas builder
     /// </summary>
     /// <param name="services">MSDI services</param>
+    /// <param name="context">Microsoft Hosting Extension Context</param>
     /// <param name="configuration">Microsoft.Extensions.Hosting configuration</param>
     public KafkasBuilder(IServiceCollection services, HostBuilderContext context, IConfiguration configuration)
     {
@@ -186,14 +187,7 @@ public class KafkasBuilder
 
         if (Configuration != null)
         {
-            IConfigurationSection section = Configuration.GetSection($"{_rootSection}:Options");
-
-            options.ConsumerGroupId = TryGetValue(section, "ConsumerGroupId", "KafkasClient");
-            options.RetryCount = TryGetValue(section, "RetryCount", 0);
-            options.RetryWaitMilliseconds = TryGetValue(section, "RetryWaitMilliseconds", 50);
-            options.RetryWaitStrategy = TryGetValue(section, "RetryDelayStrategy", WaitStrategy.Fixed);
-            options.FailedMessageStrategy = TryGetValue(section, "FailedMessageStrategy", FailedMessageStrategy.Retry);
-            options.FailedMessageDelay = TryGetValue(section, "FailedMessageDelay", 5000);
+            ReadFromConfiguration(options, _rootSection);
         }
 
         _consumerOptionsAction?.Invoke(options);
@@ -233,7 +227,10 @@ public class KafkasBuilder
         config.GroupId = options.ConsumerGroupId;
 
         if (Configuration != null)
+        {
+            ReadFromConfiguration(config, _rootSection);
             ReadFromConfiguration(config, $"{_rootSection}:Consumer");
+        }
 
         _consumerConfigAction?.Invoke(config);
         return config;
@@ -241,23 +238,23 @@ public class KafkasBuilder
 
     private void ReadFromConfiguration<TConfig>(TConfig config, string path) where TConfig : class
     {
-        if (Configuration == null)
-            return;
-
         IConfigurationSection section = Configuration.GetSection(path);
 
-        if (section != null)
+        if (section == null || !section.Exists())
+            return;
+
+        Type configType = config.GetType();
+        PropertyInfo[] properties = configType.GetProperties();
+        foreach (PropertyInfo property in properties)
         {
-            Type configType = config.GetType();
-            PropertyInfo[] properties = configType.GetProperties();
-            foreach (PropertyInfo property in properties)
-            {
-                object value = section.GetValue(property.PropertyType, property.Name);
-                if (value != null)
-                {
-                    property.SetValue(config, value);
-                }
-            }
+            IConfigurationSection child = section.GetSection(property.Name);
+
+            if (!child.Exists())
+                continue;
+
+            object value = section.GetValue(property.PropertyType, property.Name);
+            if (value != null)
+                property.SetValue(config, value);
         }
     }
 
@@ -266,7 +263,10 @@ public class KafkasBuilder
         ProducerConfig config = new ProducerConfig();
 
         if (Configuration != null)
+        {
+            ReadFromConfiguration(config, _rootSection);
             ReadFromConfiguration(config, $"{_rootSection}:Producer");
+        }
 
         _producerConfigAction?.Invoke(config);
         return config;
@@ -275,9 +275,6 @@ public class KafkasBuilder
     private static T TryGetValue<T>(IConfigurationSection section, string name, T defaultValue)
     {
         IConfigurationSection child = section.GetSection(name);
-        if (!child.Exists())
-            return defaultValue;
-
-        return section.GetValue<T>(name);
+        return !child.Exists() ? defaultValue : section.GetValue<T>(name);
     }
 }

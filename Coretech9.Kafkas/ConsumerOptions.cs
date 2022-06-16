@@ -25,25 +25,25 @@ public class ConsumerOptions
     /// <summary>
     /// Retry count
     /// </summary>
-    public int RetryCount { get; set; }
+    public int RetryCount { get; set; } = 0;
 
     /// <summary>
     /// Retry wait in milliseconds between failed consume operations
     /// </summary>
-    public int RetryWaitMilliseconds { get; set; }
+    public int RetryWaitMilliseconds { get; set; } = 50;
 
     /// <summary>
     /// Retry wait strategy
     /// </summary>
-    public WaitStrategy RetryWaitStrategy { get; set; }
+    public WaitStrategy RetryWaitStrategy { get; set; } = WaitStrategy.Fixed;
 
     /// <summary>
     /// Waits in milliseconds when a message consume operation is failed.
     /// Default value is 1000. Minimum value is 10.
     /// Lowering that value may cause unnecessary loop when all messages are failed in partition.
     /// </summary>
-    public int FailedMessageDelay { get; set; } = 1000;
-    
+    public int FailedMessageDelay { get; set; } = 5000;
+
     /// <summary>
     /// Failed message stragety.
     /// Ignore, just ignores the message. The message data will be lost!
@@ -52,10 +52,10 @@ public class ConsumerOptions
     /// Retry, retries forever.
     /// Stop, stops the consume operations for the consumer.
     /// </summary>
-    public FailedMessageStrategy FailedMessageStrategy { get; set; }
+    public FailedMessageStrategy FailedMessageStrategy { get; set; } = FailedMessageStrategy.Reproduce;
 
     /// <summary>
     /// Error topic generator function
     /// </summary>
-    public Func<ConsumingMessageMeta, Tuple<string, int>>? ErrorTopicGenerator { get; set; }
+    public Func<ConsumingMessageMeta, Tuple<string, int>> ErrorTopicGenerator { get; set; }
 }
