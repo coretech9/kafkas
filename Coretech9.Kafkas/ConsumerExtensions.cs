@@ -22,7 +22,7 @@ public static class ConsumerExtensions
         services.AddHostedService(p =>
         {
             ProducerConfig config = builder.CreateProducerConfig();
-            builder.Producer.Initialize(config, p.GetService<ILogger<KafkasProducer>>());
+            builder.Producer.Initialize(p, config, p.GetService<ILogger<KafkasProducer>>());
             return builder.Producer;
         });
         cfg(builder);
@@ -42,7 +42,7 @@ public static class ConsumerExtensions
             KafkasBuilder builder = new KafkasBuilder(services, context, context.Configuration);
             services.AddHostedService(p =>
             {
-                builder.Producer.Initialize(builder.CreateProducerConfig(), p.GetService<ILogger<KafkasProducer>>());
+                builder.Producer.Initialize(p, builder.CreateProducerConfig(), p.GetService<ILogger<KafkasProducer>>());
                 return builder.Producer;
             });
             cfg(builder);

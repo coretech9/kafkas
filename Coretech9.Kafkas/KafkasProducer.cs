@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,44 +15,28 @@ public class KafkasProducer : IHostedService
     internal ConsumerOptions Options { get; set; }
 
     private ProducerConfig _producerConfig;
+    private AdminClientConfig _adminConfig;
     private IProducer<Null, string> _producer;
     private IAdminClient _adminClient;
     private readonly List<Tuple<string, int>> _checkingErrorTopics = new List<Tuple<string, int>>();
     private ILogger<KafkasProducer> _logger;
     private Metadata _metadata;
+    private IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes producer and admin kafka clients
     /// </summary>
+    /// <param name="serviceProvider"></param>
     /// <param name="producerConfig">Producer client configuration</param>
     /// <param name="logger">Logger</param>
-    public void Initialize(ProducerConfig producerConfig, ILogger<KafkasProducer> logger)
+    public void Initialize(IServiceProvider serviceProvider, ProducerConfig producerConfig, ILogger<KafkasProducer> logger)
     {
+        _serviceProvider = serviceProvider;
         _logger = logger;
         _producerConfig = producerConfig;
-
-        var builder = new ProducerBuilder<Null, string>(_producerConfig);
-
-        var adminConfig = new AdminClientConfig();
-        ApplyProducerConfigToAdmin(_producerConfig, adminConfig);
-        adminConfig.ClientId = _producerConfig.ClientId + "-admin";
-
-        var adminBuilder = new AdminClientBuilder(adminConfig);
-
-        if (Options.LogHandler != null)
-        {
-            builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m)));
-            adminBuilder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m)));
-        }
-
-        if (Options.ErrorHandler != null)
-        {
-            builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e)));
-            adminBuilder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e)));
-        }
-
-        _producer = builder.Build();
-        _adminClient = adminBuilder.Build();
+        _adminConfig = new AdminClientConfig();
+        ApplyProducerConfigToAdmin(_producerConfig, _adminConfig);
+        _adminConfig.ClientId = _producerConfig.ClientId + "-admin";
     }
 
     private void ApplyProducerConfigToAdmin(ProducerConfig producerConfig, AdminClientConfig adminConfig)
@@ -196,7 +179,24 @@ public class KafkasProducer : IHostedService
     /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
+        var builder = new ProducerBuilder<Null, string>(_producerConfig);
+        var adminBuilder = new AdminClientBuilder(_adminConfig);
+        
+        if (Options.LogHandler != null)
+        {
+            builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m, _serviceProvider)));
+            adminBuilder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m, _serviceProvider)));
+        }
+
+        if (Options.ErrorHandler != null)
+        {
+            builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e, _serviceProvider)));
+            adminBuilder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e, _serviceProvider)));
+        }
+
+        _producer = builder.Build();
+        _adminClient = adminBuilder.Build();
+
         await CheckErrorTopic(string.Empty, 1);
     }
 

@@ -23,12 +23,18 @@ public class ErrorEventArgs
     public Error Error { get; }
 
     /// <summary>
+    /// Service Provider
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; }
+
+    /// <summary>
     /// Creates new log event args
     /// </summary>
-    public ErrorEventArgs(Type consumerType, Type messageType, Error error)
+    public ErrorEventArgs(Type consumerType, Type messageType, Error error, IServiceProvider serviceProvider)
     {
         ConsumerType = consumerType;
         MessageType = messageType;
         Error = error;
+        ServiceProvider = serviceProvider;
     }
 }

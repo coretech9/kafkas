@@ -59,12 +59,12 @@ public class ConsumerOptions
     /// Error topic generator function
     /// </summary>
     public Func<ConsumingMessageMeta, Tuple<string, int>> ErrorTopicGenerator { get; set; }
-    
+
     /// <summary>
     /// Custom log handler implementation for kafka client
     /// </summary>
     public Action<LogEventArgs> LogHandler { get; set; }
-    
+
     /// <summary>
     /// Custom error handler implementation for kafka client
     /// </summary>

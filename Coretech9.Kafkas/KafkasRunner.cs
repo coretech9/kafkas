@@ -291,10 +291,10 @@ public abstract class KafkasRunner
             var builder = new ConsumerBuilder<Null, string>(_consumerConfig);
 
             if (Options.LogHandler != null)
-                builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(ConsumerType, MessageType, m)));
+                builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(ConsumerType, MessageType, m, ServiceProvider)));
 
             if (Options.ErrorHandler != null)
-                builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(ConsumerType, MessageType, e)));
+                builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(ConsumerType, MessageType, e, ServiceProvider)));
 
             Consumer = builder.Build();
 

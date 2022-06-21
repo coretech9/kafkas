@@ -23,12 +23,18 @@ public class LogEventArgs
     public LogMessage Message { get; }
 
     /// <summary>
+    /// Service Provider
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; }
+
+    /// <summary>
     /// Creates new log event args
     /// </summary>
-    public LogEventArgs(Type consumerType, Type messageType, LogMessage message)
+    public LogEventArgs(Type consumerType, Type messageType, LogMessage message, IServiceProvider serviceProvider)
     {
         ConsumerType = consumerType;
         MessageType = messageType;
         Message = message;
+        ServiceProvider = serviceProvider;
     }
 }
