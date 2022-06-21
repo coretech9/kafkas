@@ -1,5 +1,7 @@
-﻿using Confluent.Kafka;
+﻿using System.Reflection;
+using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +13,8 @@ namespace Coretech9.Kafkas;
 /// </summary>
 public class KafkasProducer : IHostedService
 {
+    internal ConsumerOptions Options { get; set; }
+
     private ProducerConfig _producerConfig;
     private IProducer<Null, string> _producer;
     private IAdminClient _adminClient;
@@ -28,15 +32,50 @@ public class KafkasProducer : IHostedService
         _logger = logger;
         _producerConfig = producerConfig;
 
-        _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
-        _adminClient = new AdminClientBuilder(new AdminClientConfig
+        var builder = new ProducerBuilder<Null, string>(_producerConfig);
+
+        var adminConfig = new AdminClientConfig();
+        ApplyProducerConfigToAdmin(_producerConfig, adminConfig);
+        adminConfig.ClientId = _producerConfig.ClientId + "-admin";
+
+        var adminBuilder = new AdminClientBuilder(adminConfig);
+
+        if (Options.LogHandler != null)
         {
-            BootstrapServers = _producerConfig.BootstrapServers,
-            SecurityProtocol = _producerConfig.SecurityProtocol,
-            SaslMechanism = _producerConfig.SaslMechanism,
-            SaslUsername = _producerConfig.SaslUsername,
-            SaslPassword = _producerConfig.SaslPassword,
-        }).Build();
+            builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m)));
+            adminBuilder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m)));
+        }
+
+        if (Options.ErrorHandler != null)
+        {
+            builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e)));
+            adminBuilder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e)));
+        }
+
+        _producer = builder.Build();
+        _adminClient = adminBuilder.Build();
+    }
+
+    private void ApplyProducerConfigToAdmin(ProducerConfig producerConfig, AdminClientConfig adminConfig)
+    {
+        try
+        {
+            Type adminType = typeof(AdminClientConfig);
+            PropertyInfo[] properties = typeof(ProducerConfig).GetProperties();
+            foreach (PropertyInfo property in properties)
+            {
+                PropertyInfo adminProp = adminType.GetProperty(property.Name);
+                if (adminProp == null)
+                    continue;
+
+                object value = property.GetValue(producerConfig);
+                if (value != null)
+                    adminProp.SetValue(adminConfig, value);
+            }
+        }
+        catch
+        {
+        }
     }
 
     /// <summary>

@@ -276,6 +276,7 @@ public abstract class KafkasRunner
         Options = options;
         _consumerConfig = consumerConfig;
         Producer = producer;
+        Producer.Options = options;
     }
 
     /// <summary>
@@ -287,7 +288,15 @@ public abstract class KafkasRunner
     {
         try
         {
-            Consumer = new ConsumerBuilder<Null, string>(_consumerConfig).Build();
+            var builder = new ConsumerBuilder<Null, string>(_consumerConfig);
+
+            if (Options.LogHandler != null)
+                builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(ConsumerType, MessageType, m)));
+
+            if (Options.ErrorHandler != null)
+                builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(ConsumerType, MessageType, e)));
+
+            Consumer = builder.Build();
 
             if (Producer != null)
                 await Producer.CheckAndCreateTopic(Options.Topic);
