@@ -32,5 +32,10 @@ public enum FailedMessageStrategy
     /// <summary>
     /// Stops consuming operation until application restarts.
     /// </summary>
-    Stop
+    Stop,
+
+    /// <summary>
+    /// Shutdowns applicationF
+    /// </summary>
+    Shutdown
 }

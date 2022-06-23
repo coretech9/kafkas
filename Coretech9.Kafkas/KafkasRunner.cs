@@ -379,6 +379,9 @@ public abstract class KafkasRunner
                     if (strategy.Value == FailedMessageStrategy.Stop)
                         break;
 
+                    if (strategy.Value == FailedMessageStrategy.Stop)
+                        Environment.Exit(-1);
+
                     if (strategy.Value == FailedMessageStrategy.Retry)
                     {
                         await Task.Delay(Options.FailedMessageDelay);
