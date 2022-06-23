@@ -379,8 +379,11 @@ public abstract class KafkasRunner
                     if (strategy.Value == FailedMessageStrategy.Stop)
                         break;
 
-                    if (strategy.Value == FailedMessageStrategy.Stop)
+                    if (strategy.Value == FailedMessageStrategy.Shutdown)
+                    {
                         Environment.Exit(-1);
+                        return;
+                    }
 
                     if (strategy.Value == FailedMessageStrategy.Retry)
                     {
