@@ -10,6 +10,9 @@ internal class KafkasHostedService : IHostedService
     private IServiceProvider _provider;
     private ILogger<KafkasHostedService> _logger;
 
+    internal TimeSpan GracefulWait { get; set; } = TimeSpan.Zero;
+    internal Action GracefulAlert { get; set; }
+
     internal void SetServiceProvider(IServiceProvider provider)
     {
         _provider = provider;
@@ -37,10 +40,23 @@ internal class KafkasHostedService : IHostedService
     {
         _logger?.LogInformation("Stopping Kafkas Services...");
 
+        try
+        {
+            GracefulAlert?.Invoke();
+        }
+        catch
+        {
+        }
+
         List<Task> tasks = new List<Task>();
         foreach (KafkasRunnerDescriptor descriptor in _runners)
         {
             tasks.Add(descriptor.Runner.StopAsync(cancellationToken));
+        }
+
+        if (GracefulWait > TimeSpan.Zero)
+        {
+            await Task.Delay(Convert.ToInt32(GracefulWait.TotalMilliseconds), cancellationToken);
         }
 
         Task.WaitAll(tasks.ToArray(), cancellationToken);

@@ -97,6 +97,17 @@ public class KafkasBuilder
     }
 
     /// <summary>
+    /// Sets graceful shutdown service.
+    /// After SIGTERM is called, alert action is called the application waits at least duration time.
+    /// </summary>
+    public KafkasBuilder SetGracefulShutdown(TimeSpan duration, Action alertAction)
+    {
+        _hostedService.GracefulWait = duration;
+        _hostedService.GracefulAlert = alertAction;
+        return this;
+    }
+
+    /// <summary>
     /// Adds a consumer
     /// </summary>
     /// <typeparam name="TConsumer">Consumer type</typeparam>
