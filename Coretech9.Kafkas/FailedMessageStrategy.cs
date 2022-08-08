@@ -35,7 +35,7 @@ public enum FailedMessageStrategy
     Stop,
 
     /// <summary>
-    /// Shutdowns applicationF
+    /// Shutdowns application
     /// </summary>
     Shutdown
 }

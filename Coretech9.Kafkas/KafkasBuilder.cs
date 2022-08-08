@@ -236,6 +236,7 @@ public class KafkasBuilder
     {
         ConsumerConfig config = new ConsumerConfig();
         config.GroupId = options.ConsumerGroupId;
+        config.EnableAutoCommit = false;
 
         if (Configuration != null)
         {

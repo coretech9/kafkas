@@ -40,10 +40,10 @@ public class ConsumerOptions
 
     /// <summary>
     /// Waits in milliseconds when a message consume operation is failed.
-    /// Default value is 1000. Minimum value is 10.
+    /// Default value is 60000. Minimum value is 10.
     /// Lowering that value may cause unnecessary loop when all messages are failed in partition.
     /// </summary>
-    public int FailedMessageDelay { get; set; } = 5000;
+    public int FailedMessageDelay { get; set; } = 60000;
 
     /// <summary>
     /// Failed message stragety.
@@ -53,7 +53,7 @@ public class ConsumerOptions
     /// Retry, retries forever.
     /// Stop, stops the consume operations for the consumer.
     /// </summary>
-    public FailedMessageStrategy FailedMessageStrategy { get; set; } = FailedMessageStrategy.Reproduce;
+    public FailedMessageStrategy FailedMessageStrategy { get; set; } = FailedMessageStrategy.Retry;
 
     /// <summary>
     /// Error topic generator function
