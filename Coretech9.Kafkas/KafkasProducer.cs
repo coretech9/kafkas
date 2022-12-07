@@ -182,13 +182,13 @@ public class KafkasProducer : IHostedService
         var builder = new ProducerBuilder<Null, string>(_producerConfig);
         var adminBuilder = new AdminClientBuilder(_adminConfig);
         
-        if (Options.LogHandler != null)
+        if (Options?.LogHandler != null)
         {
             builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m, _serviceProvider)));
             adminBuilder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(null, null, m, _serviceProvider)));
         }
 
-        if (Options.ErrorHandler != null)
+        if (Options?.ErrorHandler != null)
         {
             builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e, _serviceProvider)));
             adminBuilder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(null, null, e, _serviceProvider)));
