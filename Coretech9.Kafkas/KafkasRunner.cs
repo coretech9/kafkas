@@ -32,7 +32,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
     /// </summary>
     /// <param name="consumeResult">Consuming message</param>
     /// <exception cref="ArgumentNullException">Thrown when message deserialization failed</exception>
-    protected override async Task<FailedMessageStrategy?> Execute(ConsumeResult<Null, string> consumeResult)
+    protected override async Task<FailedMessageStrategy?> Execute(ConsumeResult<string, string> consumeResult)
     {
         TMessage model;
         try
@@ -52,7 +52,8 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         if (ServiceProvider == null)
             throw new ArgumentNullException($"Service provider is null for {typeof(TMessage).FullName}");
 
-        ConsumeContext<TMessage> context = new ConsumeContext<TMessage>(model, consumeResult.TopicPartition, consumeResult.TopicPartitionOffset, 0);
+
+        ConsumeContext<TMessage> context = new ConsumeContext<TMessage>(model, consumeResult.Message.Key, consumeResult.Message.Value, consumeResult.TopicPartition, consumeResult.TopicPartitionOffset, 0);
 
         while (Running)
         {
@@ -92,7 +93,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         return null;
     }
 
-    private async Task<FailedMessageStrategy> ApplyFailStrategy(ConsumeResult<Null, string> consumeResult, Exception exception)
+    private async Task<FailedMessageStrategy> ApplyFailStrategy(ConsumeResult<string, string> consumeResult, Exception exception)
     {
         await Task.Delay(Math.Max(10, Options.FailedMessageDelay));
 
@@ -130,7 +131,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         return Options.FailedMessageStrategy;
     }
 
-    private async Task<bool> ReproduceMessage(ConsumeResult<Null, string> consumeResult)
+    private async Task<bool> ReproduceMessage(ConsumeResult<string, string> consumeResult)
     {
         if (Producer == null)
             return false;
@@ -148,7 +149,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         return true;
     }
 
-    private async Task<bool> ProduceErrorMessage(ConsumeResult<Null, string> consumeResult)
+    private async Task<bool> ProduceErrorMessage(ConsumeResult<string, string> consumeResult)
     {
         if (Producer == null)
             return false;
@@ -174,7 +175,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         return true;
     }
 
-    private void SafeCommit(ConsumeResult<Null, string> consumeResult)
+    private void SafeCommit(ConsumeResult<string, string> consumeResult)
     {
         try
         {
@@ -229,7 +230,7 @@ public abstract class KafkasRunner
     /// <summary>
     /// Kafka consumer client
     /// </summary>
-    protected IConsumer<Null, string> Consumer { get; private set; }
+    protected IConsumer<string, string> Consumer { get; private set; }
 
     /// <summary>
     /// Runner status
@@ -288,7 +289,7 @@ public abstract class KafkasRunner
     {
         try
         {
-            var builder = new ConsumerBuilder<Null, string>(_consumerConfig);
+            var builder = new ConsumerBuilder<string, string>(_consumerConfig);
 
             if (Options.LogHandler != null)
                 builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(ConsumerType, MessageType, m, ServiceProvider)));
@@ -363,7 +364,7 @@ public abstract class KafkasRunner
         {
             try
             {
-                ConsumeResult<Null, string> result = Consumer.Consume(TimeSpan.FromSeconds(5));
+                ConsumeResult<string, string> result = Consumer.Consume(TimeSpan.FromSeconds(5));
 
                 if (result == null || result.IsPartitionEOF)
                 {
@@ -407,5 +408,5 @@ public abstract class KafkasRunner
     /// </summary>
     /// <param name="consumeResult">Consuming message</param>
     /// <returns></returns>
-    protected abstract Task<FailedMessageStrategy?> Execute(ConsumeResult<Null, string> consumeResult);
+    protected abstract Task<FailedMessageStrategy?> Execute(ConsumeResult<string, string> consumeResult);
 }

@@ -12,7 +12,7 @@ public class ConsumerOptions
     /// Target topic name
     /// </summary>
     public string Topic { get; set; }
-
+    
     /// <summary>
     /// Target partition number
     /// </summary>

@@ -12,32 +12,46 @@ public class ConsumeContext<TMessage>
     /// Consuming message
     /// </summary>
     public TMessage Message { get; }
-    
+
     /// <summary>
     /// Topic and partition information of the message
     /// </summary>
     public TopicPartition Partition { get; }
-    
+
     /// <summary>
     /// Offset information for the message
     /// </summary>
     public TopicPartitionOffset Offset { get; }
-    
+
     /// <summary>
     /// Message total retry count
     /// </summary>
     public int RetryCount { get; set; }
 
     /// <summary>
+    /// Message Key
+    /// </summary>
+    public string Key { get; }
+
+    /// <summary>
+    /// Message Text
+    /// </summary>
+    public string MessageText { get; }
+
+    /// <summary>
     /// Creates new consume context
     /// </summary>
     /// <param name="message">Consuming message</param>
+    /// <param name="key">Message key</param>
+    /// <param name="messageText">Plain text message</param>
     /// <param name="partition">Topic and partition information of the message</param>
     /// <param name="offset">Offset information for the message</param>
     /// <param name="retryCount">Message total retry count</param>
-    public ConsumeContext(TMessage message, TopicPartition partition, TopicPartitionOffset offset, int retryCount)
+    public ConsumeContext(TMessage message, string key, string messageText, TopicPartition partition, TopicPartitionOffset offset, int retryCount)
     {
         Message = message;
+        Key = key;
+        MessageText = messageText;
         Partition = partition;
         Offset = offset;
         RetryCount = retryCount;

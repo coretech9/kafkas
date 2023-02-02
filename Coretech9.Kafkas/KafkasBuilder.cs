@@ -215,7 +215,7 @@ public class KafkasBuilder
             if (topicAttribute.Partition.HasValue)
                 options.Partition = topicAttribute.Partition;
         }
-
+        
         if (groupIdAttribute != null)
             options.ConsumerGroupId = groupIdAttribute.ConsumerGroupId;
 

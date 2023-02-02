@@ -16,7 +16,7 @@ public class KafkasProducer : IHostedService
 
     private ProducerConfig _producerConfig;
     private AdminClientConfig _adminConfig;
-    private IProducer<Null, string> _producer;
+    private IProducer<string, string> _producer;
     private IAdminClient _adminClient;
     private readonly List<Tuple<string, int>> _checkingErrorTopics = new List<Tuple<string, int>>();
     private ILogger<KafkasProducer> _logger;
@@ -67,7 +67,7 @@ public class KafkasProducer : IHostedService
     /// <param name="errorTopic">Error topic name</param>
     /// <param name="consumeResult">Consuming message</param>
     /// <returns></returns>
-    public async Task<bool> ProduceErrorMessage(string errorTopic, ConsumeResult<Null, string> consumeResult)
+    public async Task<bool> ProduceErrorMessage(string errorTopic, ConsumeResult<string, string> consumeResult)
     {
         try
         {
@@ -88,7 +88,7 @@ public class KafkasProducer : IHostedService
     /// <param name="topic">Topic name</param>
     /// <param name="consumeResult">Consuming message</param>
     /// <returns></returns>
-    public async Task<bool> ProduceMessage(string topic, ConsumeResult<Null, string> consumeResult)
+    public async Task<bool> ProduceMessage(string topic, ConsumeResult<string, string> consumeResult)
     {
         try
         {
@@ -179,7 +179,7 @@ public class KafkasProducer : IHostedService
     /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var builder = new ProducerBuilder<Null, string>(_producerConfig);
+        var builder = new ProducerBuilder<string, string>(_producerConfig);
         var adminBuilder = new AdminClientBuilder(_adminConfig);
         
         if (Options?.LogHandler != null)
