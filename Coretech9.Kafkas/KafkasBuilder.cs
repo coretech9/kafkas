@@ -215,7 +215,7 @@ public class KafkasBuilder
             if (topicAttribute.Partition.HasValue)
                 options.Partition = topicAttribute.Partition;
         }
-        
+
         if (groupIdAttribute != null)
             options.ConsumerGroupId = groupIdAttribute.ConsumerGroupId;
 
@@ -248,12 +248,12 @@ public class KafkasBuilder
         return config;
     }
 
-    private void ReadFromConfiguration<TConfig>(TConfig config, string path) where TConfig : class
+    private bool ReadFromConfiguration<TConfig>(TConfig config, string path) where TConfig : class
     {
         IConfigurationSection section = Configuration.GetSection(path);
 
         if (section == null || !section.Exists())
-            return;
+            return false;
 
         Type configType = config.GetType();
         PropertyInfo[] properties = configType.GetProperties();
@@ -268,6 +268,8 @@ public class KafkasBuilder
             if (value != null)
                 property.SetValue(config, value);
         }
+
+        return true;
     }
 
     internal ProducerConfig CreateProducerConfig()
@@ -277,7 +279,11 @@ public class KafkasBuilder
         if (Configuration != null)
         {
             ReadFromConfiguration(config, _rootSection);
-            ReadFromConfiguration(config, $"{_rootSection}:Producer");
+            
+            bool hasProducerConfig = ReadFromConfiguration(config, $"{_rootSection}:Producer");
+            
+            if (!hasProducerConfig)
+                ReadFromConfiguration(config, $"{_rootSection}:Consumer");
         }
 
         _producerConfigAction?.Invoke(config);

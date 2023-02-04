@@ -2,13 +2,12 @@
 
     <PropertyGroup>
         <LangVersion>10</LangVersion>
-        <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Title>Coretech9.Kafkas</Title>
         <Product>Coretech9.Kafkas</Product>
-        <AssemblyVersion>1.4.0</AssemblyVersion>
-        <FileVersion>1.4.0</FileVersion>
-        <PackageVersion>1.4.0</PackageVersion>
+        <AssemblyVersion>1.4.1</AssemblyVersion>
+        <FileVersion>1.4.1</FileVersion>
+        <PackageVersion>1.4.1</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Coretech9;Ertuğrul Helvacıköylü;Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/coretech9/kafkas</PackageProjectUrl>
@@ -16,6 +15,7 @@
         <RepositoryUrl>https://github.com/coretech9/kafkas</RepositoryUrl>
         <Description>C# Consumer Client Implementation for Apache Kafka</Description>
         <PackageTags>apache,kafka,consumer,producer</PackageTags>
+        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
