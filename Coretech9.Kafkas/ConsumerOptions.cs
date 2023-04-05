@@ -12,7 +12,7 @@ public class ConsumerOptions
     /// Target topic name
     /// </summary>
     public string Topic { get; set; }
-    
+
     /// <summary>
     /// Target partition number
     /// </summary>
@@ -32,6 +32,16 @@ public class ConsumerOptions
     /// Retry wait in milliseconds between failed consume operations
     /// </summary>
     public int RetryWaitMilliseconds { get; set; } = 50;
+
+    /// <summary>
+    /// Timeout value in milliseconds while attempting to consume next message
+    /// </summary>
+    public int ConsumeTimeout { get; set; } = 5000;
+
+    /// <summary>
+    /// If true, consumer restarts when Unknown Member error is occured. Default value is true.
+    /// </summary>
+    public bool RestartOnUnknownMemberError { get; set; } = true;
 
     /// <summary>
     /// Retry wait strategy

@@ -87,6 +87,14 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 
                 await messageConsumer?.RetryFallback(context, e)!;
                 await Task.Delay(CalculateWaitMilliseconds(context.RetryCount));
+
+                if (Options.RestartOnUnknownMemberError && e.Message.Contains("Broker: Unknown member"))
+                {
+                    Consumer.Close();
+                    Consumer.Dispose();
+                    await StartAsync(new CancellationToken());
+                    Logger?.LogInformation("Resubscribed to {topic} due to unknown member error", Options.Topic);
+                }
             }
         }
 
@@ -292,7 +300,7 @@ public abstract class KafkasRunner
             var builder = new ConsumerBuilder<string, string>(_consumerConfig);
 
             if (Options.LogHandler != null)
-                builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(ConsumerType, MessageType, m, ServiceProvider)));
+                builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(Options.Topic, ConsumerType, MessageType, m, ServiceProvider)));
 
             if (Options.ErrorHandler != null)
                 builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(ConsumerType, MessageType, e, ServiceProvider)));
@@ -364,7 +372,7 @@ public abstract class KafkasRunner
         {
             try
             {
-                ConsumeResult<string, string> result = Consumer.Consume(TimeSpan.FromSeconds(5));
+                ConsumeResult<string, string> result = Consumer.Consume(TimeSpan.FromMilliseconds(Options.ConsumeTimeout));
 
                 if (result == null || result.IsPartitionEOF)
                 {

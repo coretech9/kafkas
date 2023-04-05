@@ -28,10 +28,16 @@ public class LogEventArgs
     public IServiceProvider ServiceProvider { get; }
 
     /// <summary>
+    /// Topic Name
+    /// </summary>
+    public string Topic { get; }
+
+    /// <summary>
     /// Creates new log event args
     /// </summary>
-    public LogEventArgs(Type consumerType, Type messageType, LogMessage message, IServiceProvider serviceProvider)
+    public LogEventArgs(string topic, Type consumerType, Type messageType, LogMessage message, IServiceProvider serviceProvider)
     {
+        Topic = topic;
         ConsumerType = consumerType;
         MessageType = messageType;
         Message = message;

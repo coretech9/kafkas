@@ -5,9 +5,9 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Title>Coretech9.Kafkas</Title>
         <Product>Coretech9.Kafkas</Product>
-        <AssemblyVersion>1.4.1</AssemblyVersion>
-        <FileVersion>1.4.1</FileVersion>
-        <PackageVersion>1.4.1</PackageVersion>
+        <AssemblyVersion>1.4.4</AssemblyVersion>
+        <FileVersion>1.4.4</FileVersion>
+        <PackageVersion>1.4.4</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Coretech9;Ertuğrul Helvacıköylü;Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/coretech9/kafkas</PackageProjectUrl>
@@ -29,7 +29,7 @@
     <ItemGroup>
       <PackageReference Include="Confluent.Kafka" Version="2.0.2" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
     </ItemGroup>
 
 </Project>
