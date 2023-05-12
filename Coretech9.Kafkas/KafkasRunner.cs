@@ -227,6 +227,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 /// </summary>
 public abstract class KafkasRunner
 {
+    private DateTime _lastTimeoutErrorDate = DateTime.UtcNow.AddMinutes(-60);
     private ConsumerConfig _consumerConfig;
     private bool _busy;
 
@@ -299,11 +300,32 @@ public abstract class KafkasRunner
         {
             var builder = new ConsumerBuilder<string, string>(_consumerConfig);
 
-            if (Options.LogHandler != null)
-                builder.SetLogHandler((c, m) => Options.LogHandler(new LogEventArgs(Options.Topic, ConsumerType, MessageType, m, ServiceProvider)));
+            builder.SetLogHandler((c, m) =>
+            {
+                Options.LogHandler?.Invoke(new LogEventArgs(Options.Topic, ConsumerType, MessageType, m, ServiceProvider));
 
-            if (Options.ErrorHandler != null)
-                builder.SetErrorHandler((c, e) => Options.ErrorHandler(new ErrorEventArgs(ConsumerType, MessageType, e, ServiceProvider)));
+                bool shouldShutdown = (!string.IsNullOrEmpty(m.Message) && m.Message.Contains("Connection setup timed out in state CONNECT", StringComparison.InvariantCultureIgnoreCase))
+                                      || (!string.IsNullOrEmpty(m.Facility) && m.Facility.Equals("REQTMOUT", StringComparison.InvariantCultureIgnoreCase));
+
+                if (shouldShutdown && Options.ShutdownOnTimeoutErrors)
+                {
+                    if (DateTime.UtcNow - _lastTimeoutErrorDate < TimeSpan.FromSeconds(300))
+                        Environment.Exit(-1);
+                    else
+                        _lastTimeoutErrorDate = DateTime.UtcNow;
+                }
+            });
+
+            builder.SetErrorHandler((c, e) =>
+            {
+                Options?.ErrorHandler(new ErrorEventArgs(ConsumerType, MessageType, e, ServiceProvider));
+
+                if (!string.IsNullOrEmpty(e.Reason) && e.Reason.Contains("Connection refused", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (Options.ShutdownOnTimeoutErrors)
+                        Environment.Exit(-1);
+                }
+            });
 
             Consumer = builder.Build();
 

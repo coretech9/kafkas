@@ -79,4 +79,10 @@ public class ConsumerOptions
     /// Custom error handler implementation for kafka client
     /// </summary>
     public Action<ErrorEventArgs> ErrorHandler { get; set; }
+
+    /// <summary>
+    /// If true, application will exit with -1 code when there are multiple timeout messages on kafka connection.
+    /// Default value is true.
+    /// </summary>
+    public bool ShutdownOnTimeoutErrors { get; set; } = true;
 }
