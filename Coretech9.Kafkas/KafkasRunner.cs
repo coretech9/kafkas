@@ -19,12 +19,11 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
     /// <param name="consumerType">Consumer Type</param>
     /// <param name="options">Consumer options</param>
     /// <param name="consumerConfig">Consumer kafka client config</param>
-    /// <param name="producer">Producer client</param>
-    public override void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig, KafkasProducer producer)
+    public override void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig)
     {
         Logger = provider.GetService<ILogger<KafkasRunner>>();
         MessageType = typeof(TMessage);
-        base.Initialize(provider, consumerType, options, consumerConfig, producer);
+        base.Initialize(provider, consumerType, options, consumerConfig);
     }
 
     /// <summary>
@@ -141,12 +140,14 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 
     private async Task<bool> ReproduceMessage(ConsumeResult<string, string> consumeResult)
     {
-        if (Producer == null)
+        KafkasProducer producer = ServiceProvider.GetService<KafkasProducer>();
+
+        if (producer == null)
             return false;
 
         try
         {
-            await Producer?.ProduceMessage(Options.Topic, consumeResult)!;
+            await producer.ProduceMessage(Options.Topic, consumeResult.Message)!;
         }
         catch (Exception e)
         {
@@ -159,7 +160,9 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 
     private async Task<bool> ProduceErrorMessage(ConsumeResult<string, string> consumeResult)
     {
-        if (Producer == null)
+        KafkasProducer producer = ServiceProvider.GetService<KafkasProducer>();
+
+        if (producer == null)
             return false;
 
         Tuple<string, int> errorTopic = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage),
@@ -171,7 +174,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         {
             try
             {
-                await Producer?.ProduceErrorMessage(errorTopic.Item1, consumeResult)!;
+                await producer.ProduceMessage(errorTopic.Item1, true, consumeResult.Message)!;
             }
             catch (Exception e)
             {
@@ -262,11 +265,6 @@ public abstract class KafkasRunner
     protected Type ConsumerType { get; private set; }
 
     /// <summary>
-    /// Kafkas Producer and Admin Client Manager
-    /// </summary>
-    public KafkasProducer Producer { get; private set; }
-
-    /// <summary>
     /// Consuming Message Type
     /// </summary>
     protected Type MessageType { get; set; }
@@ -278,15 +276,12 @@ public abstract class KafkasRunner
     /// <param name="consumerType">Consumer Type</param>
     /// <param name="options">Consumer options</param>
     /// <param name="consumerConfig">Consumer kafka client config</param>
-    /// <param name="producer">Kafka producer and admin client manager</param>
-    public virtual void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig, KafkasProducer producer)
+    public virtual void Initialize(IServiceProvider provider, Type consumerType, ConsumerOptions options, ConsumerConfig consumerConfig)
     {
         ServiceProvider = provider;
         ConsumerType = consumerType;
         Options = options;
         _consumerConfig = consumerConfig;
-        Producer = producer;
-        Producer.Options = options;
     }
 
     /// <summary>
@@ -294,7 +289,7 @@ public abstract class KafkasRunner
     /// </summary>
     /// <param name="cancellationToken">Cancellation token for hosted service</param>
     /// <returns></returns>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -328,23 +323,7 @@ public abstract class KafkasRunner
             });
 
             Consumer = builder.Build();
-
-            if (Producer != null)
-                await Producer.CheckAndCreateTopic(Options.Topic);
-
             Consumer.Subscribe(Options.Topic);
-
-            if (Options.FailedMessageStrategy == FailedMessageStrategy.ProduceError)
-            {
-                TopicPartition partition = new TopicPartition(Options.Topic, Partition.Any);
-                TopicPartitionOffset offset = new TopicPartitionOffset(partition, new Offset(0));
-                ConsumingMessageMeta meta = new ConsumingMessageMeta(MessageType, partition, offset);
-
-                Tuple<string, int> errorTopic = Options.ErrorTopicGenerator?.Invoke(meta) ?? new Tuple<string, int>(string.Empty, 0);
-
-                if (!string.IsNullOrEmpty(errorTopic.Item1) && Producer != null)
-                    await Producer.CheckErrorTopic(errorTopic.Item1, errorTopic.Item2);
-            }
         }
         catch (Exception e)
         {
@@ -352,6 +331,7 @@ public abstract class KafkasRunner
         }
 
         _ = Task.Run(RunConsumer, cancellationToken);
+        return Task.CompletedTask;
     }
 
     /// <summary>

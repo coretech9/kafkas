@@ -1,4 +1,5 @@
-﻿using Confluent.Kafka;
+﻿using System.Runtime.CompilerServices;
+using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,16 +17,11 @@ public static class ConsumerExtensions
     /// <param name="services">MSDI services</param>
     /// <param name="cfg">Configuration action</param>
     /// <returns></returns>
-    public static IServiceCollection UseKafkas(this IServiceCollection services, Action<KafkasBuilder> cfg)
+    public static IServiceCollection UseKafkas(this IServiceCollection services, Action<KafkasBuilder> cfg = null)
     {
         KafkasBuilder builder = new KafkasBuilder(services, null, null);
-        services.AddHostedService(p =>
-        {
-            ProducerConfig config = builder.CreateProducerConfig();
-            builder.Producer.Initialize(p, config, p.GetService<ILogger<KafkasProducer>>());
-            return builder.Producer;
-        });
-        cfg(builder);
+        cfg?.Invoke(builder);
+
         return services;
     }
 
@@ -35,17 +31,12 @@ public static class ConsumerExtensions
     /// <param name="host">Host builder</param>
     /// <param name="cfg">Configuration action</param>
     /// <returns></returns>
-    public static IHostBuilder UseKafkas(this IHostBuilder host, Action<KafkasBuilder> cfg)
+    public static IHostBuilder UseKafkas(this IHostBuilder host, Action<KafkasBuilder> cfg = null)
     {
         host.ConfigureServices((context, services) =>
         {
             KafkasBuilder builder = new KafkasBuilder(services, context, context.Configuration);
-            services.AddHostedService(p =>
-            {
-                builder.Producer.Initialize(p, builder.CreateProducerConfig(), p.GetService<ILogger<KafkasProducer>>());
-                return builder.Producer;
-            });
-            cfg(builder);
+            cfg?.Invoke(builder);
         });
 
         return host;

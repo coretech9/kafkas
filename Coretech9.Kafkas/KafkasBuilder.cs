@@ -19,8 +19,6 @@ public class KafkasBuilder
     private readonly KafkasHostedService _hostedService;
     private string _rootSection = "Kafkas";
 
-    internal KafkasProducer Producer { get; }
-
     /// <summary>
     /// IHost Configuration
     /// </summary>
@@ -42,7 +40,6 @@ public class KafkasBuilder
         _services = services;
         Context = context;
         Configuration = configuration;
-        Producer = new KafkasProducer();
         _hostedService = new KafkasHostedService();
         services.AddHostedService(p =>
         {
@@ -104,6 +101,26 @@ public class KafkasBuilder
     {
         _hostedService.GracefulWait = duration;
         _hostedService.GracefulAlert = alertAction;
+        return this;
+    }
+
+    /// <summary>
+    /// Uses producer client
+    /// </summary>
+    /// <returns></returns>
+    public KafkasBuilder UseProducerClient(Action<ProducerOptions> opt)
+    {
+        _services.AddHostedService(p =>
+        {
+            ProducerOptions options = new ProducerOptions();
+            opt(options);
+
+            KafkasProducer producer = new KafkasProducer();
+            ProducerConfig config = CreateProducerConfig();
+            producer.Initialize(p, options, config);
+            return producer;
+        });
+
         return this;
     }
 
@@ -188,7 +205,7 @@ public class KafkasBuilder
             func(options);
 
         ConsumerConfig consumerConfig = CreateConsumerConfig(options);
-        runner.Initialize(provider, consumerType, options, consumerConfig, Producer);
+        runner.Initialize(provider, consumerType, options, consumerConfig);
     }
 
     private ConsumerOptions CreateConsumerOptions(Type consumerType)
@@ -275,24 +292,18 @@ public class KafkasBuilder
     internal ProducerConfig CreateProducerConfig()
     {
         ProducerConfig config = new ProducerConfig();
-
+        
         if (Configuration != null)
         {
             ReadFromConfiguration(config, _rootSection);
-            
+
             bool hasProducerConfig = ReadFromConfiguration(config, $"{_rootSection}:Producer");
-            
+
             if (!hasProducerConfig)
                 ReadFromConfiguration(config, $"{_rootSection}:Consumer");
         }
 
         _producerConfigAction?.Invoke(config);
         return config;
-    }
-
-    private static T TryGetValue<T>(IConfigurationSection section, string name, T defaultValue)
-    {
-        IConfigurationSection child = section.GetSection(name);
-        return !child.Exists() ? defaultValue : section.GetValue<T>(name);
     }
 }
