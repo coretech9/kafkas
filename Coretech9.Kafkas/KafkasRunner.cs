@@ -61,6 +61,13 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
             try
             {
                 using IServiceScope scope = ServiceProvider.CreateScope();
+
+                foreach (Type type in InterceptorTypes)
+                {
+                    var interceptor = (IKafkasInterceptor) scope.ServiceProvider.GetService(type);
+                    await interceptor.Handle(context);
+                }
+
                 messageConsumer = (ITopicConsumer<TMessage>) scope.ServiceProvider.GetService(ConsumerType);
 
                 if (messageConsumer == null)
@@ -91,7 +98,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
                 {
                     Consumer.Close();
                     Consumer.Dispose();
-                    await StartAsync(new CancellationToken());
+                    await StartAsync(InterceptorTypes, new CancellationToken());
                     Logger?.LogInformation("Resubscribed to {topic} due to unknown member error", Options.Topic);
                 }
             }
@@ -270,6 +277,11 @@ public abstract class KafkasRunner
     protected Type MessageType { get; set; }
 
     /// <summary>
+    /// Consumer Interceptor types implemented from IConsumerInterceptor
+    /// </summary>
+    protected Type[] InterceptorTypes { get; set; }
+
+    /// <summary>
     /// Initializes kafka runner
     /// </summary>
     /// <param name="provider">MSDI Service provider</param>
@@ -287,10 +299,12 @@ public abstract class KafkasRunner
     /// <summary>
     /// Starts kafka runner hosted service
     /// </summary>
+    /// <param name="interceptors">Interceptor types with IConsumerInterceptor implementation</param>
     /// <param name="cancellationToken">Cancellation token for hosted service</param>
     /// <returns></returns>
-    public Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(Type[] interceptors, CancellationToken cancellationToken)
     {
+        InterceptorTypes = interceptors;
         try
         {
             var builder = new ConsumerBuilder<string, string>(_consumerConfig);

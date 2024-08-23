@@ -5,9 +5,9 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Title>Coretech9.Kafkas</Title>
         <Product>Coretech9.Kafkas</Product>
-        <AssemblyVersion>2.2.0</AssemblyVersion>
-        <FileVersion>2.2.0</FileVersion>
-        <PackageVersion>2.2.0</PackageVersion>
+        <AssemblyVersion>2.5.0</AssemblyVersion>
+        <FileVersion>2.5.0</FileVersion>
+        <PackageVersion>2.5.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Coretech9;Ertuğrul Helvacıköylü;Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/coretech9/kafkas</PackageProjectUrl>
@@ -15,7 +15,7 @@
         <RepositoryUrl>https://github.com/coretech9/kafkas</RepositoryUrl>
         <Description>C# Consumer Client Implementation for Apache Kafka</Description>
         <PackageTags>apache,kafka,consumer,producer</PackageTags>
-        <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+        <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -27,9 +27,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Confluent.Kafka" Version="2.2.0" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+      <PackageReference Include="Confluent.Kafka" Version="2.5.2" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     </ItemGroup>
 
 </Project>

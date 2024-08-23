@@ -13,6 +13,8 @@ internal class KafkasHostedService : IHostedService
     internal TimeSpan GracefulWait { get; set; } = TimeSpan.Zero;
     internal Action GracefulAlert { get; set; }
 
+    internal List<Type> Interceptors { get; } = new List<Type>();
+
     internal void SetServiceProvider(IServiceProvider provider)
     {
         _provider = provider;
@@ -27,11 +29,12 @@ internal class KafkasHostedService : IHostedService
             throw new InvalidOperationException("Service Provider is null. Kafkas is not initialized correctly!");
         }
 
+        Type[] interceptors = Interceptors.ToArray();
         foreach (KafkasRunnerDescriptor descriptor in _runners)
         {
             _logger?.LogInformation("Initializing kafkas service: {serviceName}", descriptor.Runner.ToString());
             descriptor.InitAction(_provider);
-            await descriptor.Runner.StartAsync(cancellationToken);
+            await descriptor.Runner.StartAsync(interceptors, cancellationToken);
             _logger?.LogInformation("Kafkas service started: {serviceName}", descriptor.Runner.ToString());
         }
     }

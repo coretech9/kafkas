@@ -16,6 +16,7 @@ IHost host = Host.CreateDefaultBuilder()
         });
 
         builder.AddConsumer<FooConsumer2, Foo>(o => { o.Partition = 5; });
+        builder.AddInterceptor<FooInterceptor>();
     })
     .Build();
 

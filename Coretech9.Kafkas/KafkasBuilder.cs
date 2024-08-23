@@ -197,12 +197,21 @@ public class KafkasBuilder
         return this;
     }
 
+    /// <summary>
+    /// Adds Scoped Interceptor for all consumers
+    /// </summary>
+    /// <typeparam name="TInterceptor">Interceptor type</typeparam>
+    public void AddInterceptor<TInterceptor>() where TInterceptor : class, IKafkasInterceptor
+    {
+        _services.AddScoped<TInterceptor, TInterceptor>();
+        _hostedService.Interceptors.Add(typeof(TInterceptor));
+    }
+
     private void InitializeKafkaRunner(IServiceProvider provider, KafkasRunner runner, Type consumerType, Action<ConsumerOptions> func = null)
     {
         ConsumerOptions options = CreateConsumerOptions(consumerType);
 
-        if (func != null)
-            func(options);
+        func?.Invoke(options);
 
         ConsumerConfig consumerConfig = CreateConsumerConfig(options);
         runner.Initialize(provider, consumerType, options, consumerConfig);
@@ -292,7 +301,7 @@ public class KafkasBuilder
     internal ProducerConfig CreateProducerConfig()
     {
         ProducerConfig config = new ProducerConfig();
-        
+
         if (Configuration != null)
         {
             ReadFromConfiguration(config, _rootSection);
