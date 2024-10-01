@@ -17,12 +17,14 @@ public class ConsumeContext<TMessage> : ConsumeContext
     /// Creates new consume context
     /// </summary>
     /// <param name="message">Consuming message</param>
+    /// <param name="topic">Kafka topic name</param>
     /// <param name="key">Message key</param>
     /// <param name="messageText">Plain text message</param>
     /// <param name="partition">Topic and partition information of the message</param>
     /// <param name="offset">Offset information for the message</param>
     /// <param name="retryCount">Message total retry count</param>
-    public ConsumeContext(TMessage message, string key, string messageText, TopicPartition partition, TopicPartitionOffset offset, int retryCount) : base(key, messageText, partition, offset, retryCount)
+    public ConsumeContext(TMessage message, string topic, string key, string messageText, TopicPartition partition, TopicPartitionOffset offset, int retryCount)
+        : base(topic, key, messageText, partition, offset, retryCount)
     {
         Message = message;
     }
@@ -59,16 +61,22 @@ public class ConsumeContext
     public string MessageText { get; }
 
     /// <summary>
+    /// Topic Name
+    /// </summary>
+    public string Topic { get; }
+
+    /// <summary>
     /// Creates new consume context
     /// </summary>
-    /// <param name="message">Consuming message</param>
+    /// <param name="topic">Kafka topic name</param>
     /// <param name="key">Message key</param>
     /// <param name="messageText">Plain text message</param>
     /// <param name="partition">Topic and partition information of the message</param>
     /// <param name="offset">Offset information for the message</param>
     /// <param name="retryCount">Message total retry count</param>
-    public ConsumeContext(string key, string messageText, TopicPartition partition, TopicPartitionOffset offset, int retryCount)
+    public ConsumeContext(string topic, string key, string messageText, TopicPartition partition, TopicPartitionOffset offset, int retryCount)
     {
+        Topic = topic;
         Key = key;
         MessageText = messageText;
         Partition = partition;

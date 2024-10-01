@@ -51,8 +51,9 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         if (ServiceProvider == null)
             throw new ArgumentNullException($"Service provider is null for {typeof(TMessage).FullName}");
 
-
-        ConsumeContext<TMessage> context = new ConsumeContext<TMessage>(model, consumeResult.Message.Key, consumeResult.Message.Value, consumeResult.TopicPartition, consumeResult.TopicPartitionOffset, 0);
+        ConsumeContext<TMessage> context = new ConsumeContext<TMessage>(model, consumeResult.Topic,
+            consumeResult.Message.Key, consumeResult.Message.Value,
+            consumeResult.TopicPartition, consumeResult.TopicPartitionOffset, 0);
 
         while (Running)
         {
