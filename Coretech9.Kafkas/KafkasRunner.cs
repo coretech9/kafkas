@@ -43,7 +43,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         }
         catch (Exception e)
         {
-            Logger?.LogError(e, "Model Serialization error for {topicName}", consumeResult.Topic);
+            Logger?.LogError(e, "Model Serialization error for {topicName}: {model}", consumeResult.Topic, consumeResult.Message.Value);
             FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, e);
             return strategy;
         }
