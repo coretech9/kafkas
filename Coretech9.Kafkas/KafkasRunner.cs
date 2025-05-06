@@ -12,6 +12,8 @@ namespace Coretech9.Kafkas;
 /// <typeparam name="TConsumer">Consumer type</typeparam>
 public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 {
+    private int _failedMessagesInARow = 0;
+
     /// <summary>
     /// Initializes kafka runner
     /// </summary>
@@ -33,7 +35,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
     /// <exception cref="ArgumentNullException">Thrown when message deserialization failed</exception>
     protected override async Task<FailedMessageStrategy?> Execute(ConsumeResult<string, string> consumeResult)
     {
-        TMessage model;
+        TMessage model = default;
         try
         {
             model = System.Text.Json.JsonSerializer.Deserialize<TMessage>(consumeResult.Message.Value);
@@ -44,7 +46,7 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         catch (Exception e)
         {
             Logger?.LogError(e, "Model Serialization error for {topicName}: {model}", consumeResult.Topic, consumeResult.Message.Value);
-            FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, e);
+            FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, model ?? default, e);
             return strategy;
         }
 
@@ -76,16 +78,18 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
 
                 await messageConsumer.Consume(context);
                 Consumer?.Commit(consumeResult);
+                _failedMessagesInARow = 0;
 
                 break;
             }
             catch (Exception e)
             {
                 context.RetryCount++;
+                _failedMessagesInARow++;
 
                 if (context.RetryCount >= Options.RetryCount)
                 {
-                    FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, e);
+                    FailedMessageStrategy strategy = await ApplyFailStrategy(consumeResult, model, e);
                     Logger?.LogError(e, "Consume operation reached maximum retry count for {topic}", consumeResult.Topic);
                     return strategy;
                 }
@@ -108,15 +112,98 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         return null;
     }
 
-    private async Task<FailedMessageStrategy> ApplyFailStrategy(ConsumeResult<string, string> consumeResult, Exception exception)
+    /// <summary>
+    /// Executes consume operation
+    /// </summary>
+    /// <param name="consumeResult">Consuming message</param>
+    /// <exception cref="ArgumentNullException">Thrown when message deserialization failed</exception>
+    protected override async Task ExecuteSkip(ConsumeResult<string, string> consumeResult)
+    {
+        SkippedMessage<TMessage> model = default;
+        try
+        {
+            model = System.Text.Json.JsonSerializer.Deserialize<SkippedMessage<TMessage>>(consumeResult.Message.Value);
+
+            if (model == null)
+                throw new ArgumentNullException($"Consume model is null for {typeof(TMessage).FullName}");
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "Model Serialization error for {topicName}: {model}", consumeResult.Topic, consumeResult.Message.Value);
+            return;
+        }
+
+        if (ServiceProvider == null)
+            throw new ArgumentNullException($"Service provider is null for {typeof(TMessage).FullName}");
+
+        ConsumeContext<SkippedMessage<TMessage>> context = new ConsumeContext<SkippedMessage<TMessage>>(model, consumeResult.Topic,
+            consumeResult.Message.Key, consumeResult.Message.Value,
+            consumeResult.TopicPartition, consumeResult.TopicPartitionOffset, 0);
+
+        DateTime waitUntil = DateTime.UnixEpoch.AddSeconds(model.ConsumeAfter);
+        while (waitUntil > DateTime.UtcNow)
+        {
+            await Task.Delay(500);
+            if (!Running)
+                return;
+        }
+
+        ITopicConsumer<TMessage> messageConsumer = null;
+        try
+        {
+            using IServiceScope scope = ServiceProvider.CreateScope();
+
+            foreach (Type type in InterceptorTypes)
+            {
+                var interceptor = (IKafkasInterceptor) scope.ServiceProvider.GetService(type);
+                await interceptor.Handle(context);
+            }
+
+            messageConsumer = (ITopicConsumer<TMessage>) scope.ServiceProvider.GetService(ConsumerType);
+
+            if (messageConsumer == null)
+                throw new ArgumentNullException($"TopicConsumer is not registered for {typeof(TMessage).FullName}");
+
+            await messageConsumer.ConsumeSkipped(context);
+            Consumer?.Commit(consumeResult);
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "Consume operation failed on skipped topic for {topic}", consumeResult.Topic);
+            await Task.Delay(Math.Min(Convert.ToInt32(Options.SkipRetryDelay.TotalMilliseconds), 1000));
+        }
+    }
+
+
+    private async Task<FailedMessageStrategy> ApplyFailStrategy(ConsumeResult<string, string> consumeResult, TMessage model, Exception exception)
     {
         await Task.Delay(Math.Max(10, Options.FailedMessageDelay));
 
         switch (Options.FailedMessageStrategy)
         {
-            case FailedMessageStrategy.ProduceError:
+            case FailedMessageStrategy.SkipMessage:
             {
-                bool produced = await ProduceErrorMessage(consumeResult);
+                if (_failedMessagesInARow > Options.SkipTopicLimit)
+                {
+                    await Task.Delay(Math.Max(10, Options.FailedMessageDelay));
+                    return FailedMessageStrategy.Retry;
+                }
+
+                string skipMessageContent;
+                long consumeAfter = Convert.ToInt64((DateTime.UtcNow.Add((Options.SkipDuration)) - DateTime.UnixEpoch).TotalSeconds);
+                if (model != null)
+                {
+                    SkippedMessage<TMessage> skippedMessage = new SkippedMessage<TMessage> {Message = model, ConsumeAfter = consumeAfter};
+                    skipMessageContent = System.Text.Json.JsonSerializer.Serialize(skippedMessage);
+                }
+                else
+                {
+                    SkippedMessage<string> skippedMessage = new SkippedMessage<string> {Message = consumeResult.Message.Value, ConsumeAfter = consumeAfter};
+                    skipMessageContent = System.Text.Json.JsonSerializer.Serialize(skippedMessage);
+                }
+
+                consumeResult.Message.Value = skipMessageContent;
+                bool produced = await ProduceSkipMessage(consumeResult);
                 if (produced)
                     SafeCommit(consumeResult);
                 else
@@ -166,29 +253,21 @@ public class KafkasRunner<TConsumer, TMessage> : KafkasRunner
         return true;
     }
 
-    private async Task<bool> ProduceErrorMessage(ConsumeResult<string, string> consumeResult)
+    private async Task<bool> ProduceSkipMessage(ConsumeResult<string, string> consumeResult)
     {
         KafkasProducer producer = ServiceProvider.GetService<KafkasProducer>();
 
         if (producer == null)
             return false;
 
-        Tuple<string, int> errorTopic = Options.ErrorTopicGenerator?.Invoke(new ConsumingMessageMeta(typeof(TMessage),
-                                            consumeResult.TopicPartition,
-                                            consumeResult.TopicPartitionOffset))
-                                        ?? new Tuple<string, int>(string.Empty, 0);
-
-        if (!string.IsNullOrEmpty(errorTopic.Item1))
+        try
         {
-            try
-            {
-                await producer.ProduceMessage(errorTopic.Item1, true, consumeResult.Message)!;
-            }
-            catch (Exception e)
-            {
-                Logger?.LogCritical(e, "ProduceErrorMessage Failed");
-                return false;
-            }
+            await producer.ProduceMessage(Options.SkipTopicName, true, consumeResult.Message)!;
+        }
+        catch (Exception e)
+        {
+            Logger?.LogCritical(e, "ProduceSkipMessage Failed");
+            return false;
         }
 
         return true;
@@ -251,6 +330,8 @@ public abstract class KafkasRunner
     /// Kafka consumer client
     /// </summary>
     protected IConsumer<string, string> Consumer { get; private set; }
+
+    protected IConsumer<string, string> SkipConsumer { get; private set; }
 
     /// <summary>
     /// Runner status
@@ -339,6 +420,12 @@ public abstract class KafkasRunner
 
             Consumer = builder.Build();
             Consumer.Subscribe(Options.Topic);
+
+            if (!string.IsNullOrEmpty(Options.SkipTopicName))
+            {
+                SkipConsumer = builder.Build();
+                SkipConsumer.Subscribe(Options.SkipTopicName);
+            }
         }
         catch (Exception e)
         {
@@ -385,6 +472,9 @@ public abstract class KafkasRunner
             throw new ArgumentNullException($"Kafkas is not initialized for {GetType()}");
         }
 
+        if (SkipConsumer != null)
+            _ = RunSkipConsumer();
+
         while (Running)
         {
             try
@@ -428,10 +518,41 @@ public abstract class KafkasRunner
         _busy = false;
     }
 
+    private async Task RunSkipConsumer()
+    {
+        while (Running)
+        {
+            try
+            {
+                ConsumeResult<string, string> result = SkipConsumer.Consume(TimeSpan.FromMilliseconds(Options.ConsumeTimeout));
+
+                if (result == null || result.IsPartitionEOF)
+                {
+                    await Task.Delay(50);
+                    continue;
+                }
+
+                await ExecuteSkip(result);
+            }
+            catch (Exception e)
+            {
+                Logger?.LogCritical(e, "KafkaRunner Skip Consume operation is failed for {typeName}", GetType().FullName);
+                await Task.Delay(5000);
+            }
+        }
+    }
+
     /// <summary>
     /// Executes consume operation
     /// </summary>
     /// <param name="consumeResult">Consuming message</param>
     /// <returns></returns>
     protected abstract Task<FailedMessageStrategy?> Execute(ConsumeResult<string, string> consumeResult);
+
+    /// <summary>
+    /// Executed from skip topic
+    /// </summary>
+    /// <param name="consumeResult"></param>
+    /// <returns></returns>
+    protected abstract Task ExecuteSkip(ConsumeResult<string, string> consumeResult);
 }

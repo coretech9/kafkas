@@ -19,6 +19,26 @@ public class ConsumerOptions
     public int? Partition { get; set; }
 
     /// <summary>
+    /// If SkipTopic activated, overrides skip topic name
+    /// </summary>
+    public string SkipTopicName { get; set; }
+
+    /// <summary>
+    /// Skip duration
+    /// </summary>
+    public TimeSpan SkipDuration { get; set; }
+    
+    /// <summary>
+    /// Skip Topic Limit
+    /// </summary>
+    public int SkipTopicLimit { get; set; }
+
+    /// <summary>
+    /// Retry delay for skipped topic message
+    /// </summary>
+    public TimeSpan SkipRetryDelay { get; set; }
+
+    /// <summary>
     /// Consumer group id
     /// </summary>
     public string ConsumerGroupId { get; set; }
@@ -64,11 +84,6 @@ public class ConsumerOptions
     /// Stop, stops the consume operations for the consumer.
     /// </summary>
     public FailedMessageStrategy FailedMessageStrategy { get; set; } = FailedMessageStrategy.Retry;
-
-    /// <summary>
-    /// Error topic generator function
-    /// </summary>
-    public Func<ConsumingMessageMeta, Tuple<string, int>> ErrorTopicGenerator { get; set; }
 
     /// <summary>
     /// Custom log handler implementation for kafka client

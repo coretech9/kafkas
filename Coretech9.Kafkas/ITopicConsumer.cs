@@ -23,4 +23,15 @@ public interface ITopicConsumer<TMessage>
     {
         return Task.CompletedTask;
     }
+    
+    /// <summary>
+    /// Executed if fail message strategy is SkipMessage.
+    /// Skipped messages are consumed for another queue.
+    /// </summary>
+    /// <param name="consumeContext">Consuming message context</param>
+    /// <returns></returns>
+    public Task ConsumeSkipped(ConsumeContext<SkippedMessage<TMessage>> consumeContext)
+    {
+        return Task.CompletedTask;
+    }
 }

@@ -12,10 +12,10 @@ public enum FailedMessageStrategy
     Ignore,
 
     /// <summary>
-    /// Produces the message to the error topic.
-    /// After producing to error topic operation, the message is commited.
+    /// Produces the message into the skip topic.
+    /// After producing to skip topic operation, the message is commited.
     /// </summary>
-    ProduceError,
+    SkipMessage,
 
     /// <summary>
     /// Produces the message to the same topic.

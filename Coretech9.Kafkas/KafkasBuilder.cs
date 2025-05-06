@@ -220,7 +220,6 @@ public class KafkasBuilder
     private ConsumerOptions CreateConsumerOptions(Type consumerType)
     {
         ConsumerOptions options = new ConsumerOptions();
-        options.ErrorTopicGenerator = m => new Tuple<string, int>($"{m.TopicPartition.Topic}_Error", 1);
 
         if (Configuration != null)
         {
@@ -231,8 +230,8 @@ public class KafkasBuilder
 
         TopicAttribute topicAttribute = consumerType.GetCustomAttribute<TopicAttribute>();
         ConsumerGroupIdAttribute groupIdAttribute = consumerType.GetCustomAttribute<ConsumerGroupIdAttribute>();
-        ErrorTopicAttribute errorTopicAttribute = consumerType.GetCustomAttribute<ErrorTopicAttribute>();
         RetryAttribute retryAttribute = consumerType.GetCustomAttribute<RetryAttribute>();
+        SkipTopicAttribute skipAttribute = consumerType.GetCustomAttribute<SkipTopicAttribute>();
 
         if (topicAttribute != null)
         {
@@ -245,14 +244,19 @@ public class KafkasBuilder
         if (groupIdAttribute != null)
             options.ConsumerGroupId = groupIdAttribute.ConsumerGroupId;
 
-        if (errorTopicAttribute != null)
-            options.ErrorTopicGenerator = _ => new Tuple<string, int>(errorTopicAttribute.Topic, errorTopicAttribute.PartitionCount);
-
         if (retryAttribute != null)
         {
             options.RetryCount = retryAttribute.Count;
             options.RetryWaitMilliseconds = retryAttribute.WaitMilliseconds;
             options.RetryWaitStrategy = retryAttribute.Strategy;
+        }
+
+        if (skipAttribute != null)
+        {
+            options.SkipTopicName = skipAttribute.Topic;
+            options.SkipDuration = skipAttribute.SkipDuration;
+            options.SkipTopicLimit = skipAttribute.SkipLimit;
+            options.SkipRetryDelay = skipAttribute.SkipFailRetryDelay;
         }
 
         return options;
